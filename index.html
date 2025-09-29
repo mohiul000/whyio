@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whyio - Design Your Story</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase Libraries -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        setLogLevel('Debug');
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        let app;
+        let auth;
+        let db;
+
+        // Use a flag to ensure Firebase is initialized only once
+        if (typeof window.firebaseInitialized === 'undefined') {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            window.firebaseInitialized = true;
+        }
+
+        window.firebase = {
+            auth,
+            db,
+            appId,
+            initialAuthToken,
+            onAuthStateChanged,
+            signInAnonymously,
+            signInWithCustomToken,
+            getFirestore
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d;
+        }
+        .container-bg {
+            background-color: #1a1a1a;
+            border-color: #262626;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+        }
+        .tab-button {
+            transition: color 0.3s, background-color 0.3s;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 antialiased flex flex-col min-h-screen text-gray-200">
+
+    <!-- Main Content Container -->
+    <div class="flex-grow p-4 md:p-8 flex flex-col items-center">
+
+        <!-- Header Section -->
+        <header class="bg-gray-800 shadow-xl py-4 px-6 md:px-8 w-full fixed top-0 left-0 z-50">
+            <nav class="flex justify-between items-center max-w-7xl mx-auto">
+                <div class="flex items-center space-x-2">
+                    <img src="https://placehold.co/40x40/0d0d0d/ffffff?text=W" alt="Whyio Brand Logo" class="h-10 rounded-full">
+                    <a href="#" class="text-3xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors">WHYIO</a>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <!-- Tab buttons to switch between sections -->
+                    <button class="nav-link tab-button text-blue-400 font-medium hover:text-blue-400 transition-colors" data-tab="home">Home</button>
+                    <button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="customDesigns">Custom Designs</button>
+                    <button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="account">Account</button>
+                </div>
+                <div>
+                    <button id="authButton" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg shadow-blue-500/50 hover:bg-blue-700 transition-colors">Login / Signup</button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Dynamic Content Sections -->
+        <div class="w-full max-w-7xl mx-auto mt-24">
+            
+            <!-- --- Home Section --- -->
+            <div id="home-section" class="tab-content" style="display: block;">
+                <!-- Hero Section with Moto -->
+                <div class="hero-section text-center py-20 bg-gray-800 rounded-xl mb-12 shadow-lg container-bg">
+                    <h1 class="text-5xl md:text-6xl font-extrabold text-gray-100 leading-tight">
+                        Find Your Why. <br>And Write Your Own Story.
+                    </h1>
+                    <p class="text-xl md:text-2xl text-gray-400 mt-4 max-w-3xl mx-auto">
+                        Your one-stop shop for self-expression through custom apparel.
+                    </p>
+                </div>
+
+                <!-- T-Shirt Categories Section -->
+                <div class="mb-12">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6 text-center">Our T-Shirt Collection</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Drop Shoulder Tee Card -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg">
+                            <img src="https://placehold.co/400x400/1e1e1e/ffffff?text=Drop+Shoulder+Tee" alt="Drop Shoulder T-Shirt" class="w-full h-auto rounded-lg mb-4">
+                            <h3 class="text-lg font-semibold text-gray-100">Drop Shoulder Tees</h3>
+                            <p class="text-gray-400">Relaxed fit for ultimate comfort.</p>
+                        </div>
+                        <!-- Polo T-Shirt Card -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg">
+                            <img src="https://placehold.co/400x400/1e1e1e/ffffff?text=Polo+T-Shirt" alt="Polo T-Shirt" class="w-full h-auto rounded-lg mb-4">
+                            <h3 class="text-lg font-semibold text-gray-100">Polo T-Shirts</h3>
+                            <p class="text-gray-400">Classic style with a modern touch.</p>
+                        </div>
+                        <!-- T-Shirt Card -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg">
+                            <img src="https://placehold.co/400x400/1e1e1e/ffffff?text=Classic+T-Shirt" alt="Classic T-Shirt" class="w-full h-auto rounded-lg mb-4">
+                            <h3 class="text-lg font-semibold text-gray-100">Classic T-Shirts</h3>
+                            <p class="text-gray-400">The timeless, everyday essential.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Start Designing Section -->
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center mb-12 container-bg">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-4">Start Designing</h2>
+                    <p class="text-gray-400 mb-6 max-w-3xl mx-auto">Unleash your creativity and design a t-shirt that's uniquely you. Our AI-powered tool can bring any idea to life.</p>
+                    <button data-tab="customDesigns" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
+                        Create My Own Design
+                    </button>
+                </div>
+
+                <!-- Design and Earn Section -->
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center container-bg">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-4">Design and Earn</h2>
+                    <p class="text-gray-400 mb-6 max-w-3xl mx-auto">Are you an artist or a design enthusiast? Join our community and earn from your creations. Upload your designs, and we'll handle the rest—from production to shipping. Every sale earns you a commission.</p>
+                    <button data-tab="account" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
+                        Join the Whyio Community
+                    </button>
+                </div>
+            </div>
+
+            <!-- --- Custom Designs Section (Initially Hidden) --- -->
+            <div id="customDesigns-section" class="tab-content" style="display: none;">
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6">Create Your Own Design</h2>
+                    <p class="text-gray-400 mb-6 text-center">Describe the design you want for your t-shirt and our AI will generate it for you.</p>
+
+                    <div class="w-full max-w-md">
+                        <label for="designPrompt" class="block text-gray-300 font-medium mb-2">Design Prompt</label>
+                        <input type="text" id="designPrompt" placeholder="E.g., A futuristic cyberpunk cat wearing sunglasses" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <button id="generateBtn" class="mt-6 btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50">Generate Design</button>
+
+                    <div id="loading" class="mt-6 text-blue-400 hidden">
+                        <svg class="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                    </div>
+
+                    <div id="designOutput" class="mt-8 hidden w-full max-w-md">
+                        <h3 class="text-xl font-semibold text-gray-100 mb-4">Your Generated Design</h3>
+                        <img id="generatedImage" src="" alt="Generated T-Shirt Design" class="w-full h-auto rounded-lg shadow-lg">
+                        <button id="addToCartBtn" class="mt-4 w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Add to Cart</button>
+                    </div>
+
+                    <div id="messageBox" class="mt-6 p-4 rounded-lg hidden"></div>
+                </div>
+            </div>
+
+            <!-- --- Account Section (Initially Hidden) --- -->
+            <div id="account-section" class="tab-content" style="display: none;">
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center max-w-xl mx-auto">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6">My Account</h2>
+                    <div id="authStatus" class="text-center text-gray-400 mb-4">
+                        <p>Loading user status...</p>
+                    </div>
+                    <div id="userDetails" class="hidden w-full space-y-4 text-gray-300">
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <p><strong>User ID:</strong> <span id="userIdDisplay"></span></p>
+                        </div>
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <p><strong>Status:</strong> <span id="statusDisplay"></span></p>
+                        </div>
+                        <button id="logoutBtn" class="w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Logout</button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 mt-12 w-full rounded-t-lg">
+        <div class="max-w-7xl mx-auto text-center md:text-left">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-2 text-gray-200">Whyio</h3>
+                    <p class="text-sm text-gray-500">Find Your Why And Write Your Own Story.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-2 text-gray-200">Shop</h3>
+                    <ul class="text-sm space-y-1">
+                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">T-Shirts</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">Polo Shirts</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">Drop Shoulder Tees</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-2 text-gray-200">Follow Us</h3>
+                    <div class="flex justify-center md:justify-start space-x-4">
+                        <!-- SVG icons for social media -->
+                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V15h-2.91v-3h2.91V9.22c0-3.95 2.413-6.11 5.927-6.11 1.696 0 3.153.12 3.585.174v2.91h-1.72c-1.687 0-2.015.8-2.015 1.977V12h3.254l-.527 3h-2.727v6.879C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" /></svg></a>
+                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c2.715 0 3.056.01 4.12.06a4.72 4.72 0 011.666.315 2.872 2.872 0 011.603 1.603c.15.485.255.97.315 1.666.05.74.06 1.08.06 4.12s-.01 3.056-.06 4.12a4.72 4.72 0 01-.315 1.666 2.872 2.872 0 01-1.603 1.603c-.485.15-.97.255-1.666.315-.74.05-1.08.06-4.12.06s-3.056-.01-4.12-.06a4.72 4.72 0 01-1.666-.315 2.872 2.872 0 01-1.603-1.603c-.15-.485-.255-.97-.315-1.666-.05-.74-.06-1.08-.06-4.12s.01-3.056.06-4.12a4.72 4.72 0 01.315-1.666 2.872 2.872 0 011.603-1.603c.485-.15.97-.255 1.666-.315.74-.05 1.08-.06 4.12-.06zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z" /></svg></a>
+                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.89 1.153C19.78 1.153 20.35 1.724 20.35 2.615v18.77c0 .89-.571 1.46-1.46 1.46H2.614c-.89 0-1.46-.57-1.46-1.46V2.615c0-.89.57-1.46 1.46-1.46H18.89zM8.347 18.067V9.752h-2.61V18.067H8.347zm-1.305-9.45c.87 0 1.58-.71 1.58-1.58s-.71-1.58-1.58-1.58c-.87 0-1.58.71-1.58 1.58s.71 1.58 1.58 1.58zm12.925 9.45V13.84c0-2.31-1.15-3.53-2.91-3.53-1.47 0-2.36.87-2.73 1.76h-.04v-1.54H12.42v8.465H15v-5.21c0-.42.08-.85.24-1.15.16-.3.44-.57.94-.57 1.14 0 1.59.87 1.59 2.15v4.78h2.61v-6.93z" /></svg></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-4 text-center">
+                <p class="text-sm text-gray-500">&copy; 2024 Whyio. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // Use a single script block for all JS logic
+        const tabs = {
+            home: document.getElementById('home-section'),
+            customDesigns: document.getElementById('customDesigns-section'),
+            account: document.getElementById('account-section')
+        };
+        const tabButtons = document.querySelectorAll('.tab-button, [data-tab]');
+        const authButton = document.getElementById('authButton');
+        const designPromptInput = document.getElementById('designPrompt');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingSpinner = document.getElementById('loading');
+        const designOutput = document.getElementById('designOutput');
+        const generatedImage = document.getElementById('generatedImage');
+        const messageBox = document.getElementById('messageBox');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+        const statusDisplay = document.getElementById('statusDisplay');
+        const userDetails = document.getElementById('userDetails');
+        const authStatus = document.getElementById('authStatus');
+
+        // Function to show/hide sections
+        function showTab(tabName) {
+            Object.values(tabs).forEach(tab => tab.style.display = 'none');
+            if (tabs[tabName]) {
+                tabs[tabName].style.display = 'block';
+            }
+            tabButtons.forEach(btn => {
+                btn.classList.remove('text-blue-400');
+                btn.classList.add('text-gray-400');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('text-blue-400');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.remove('text-gray-400');
+        }
+
+        // Add event listeners to switch tabs
+        tabButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const tabName = event.target.dataset.tab;
+                if (tabName) {
+                    showTab(tabName);
+                }
+            });
+        });
+
+        // Function to show a message in the message box
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-900', 'bg-blue-900', 'text-red-300', 'text-blue-300');
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-900', 'text-red-300');
+            } else {
+                messageBox.classList.add('bg-blue-900', 'text-blue-300');
+            }
+        }
+
+        // Handle authentication status
+        window.onload = function() {
+            const auth = window.firebase.auth;
+            const initialAuthToken = window.firebase.initialAuthToken;
+
+            // Wait for auth state to be ready
+            window.firebase.onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    authButton.textContent = "My Account";
+                    authButton.dataset.tab = 'account';
+                    authStatus.classList.add('hidden');
+                    userDetails.classList.remove('hidden');
+                    userIdDisplay.textContent = user.uid;
+                    statusDisplay.textContent = 'Authenticated';
+                } else {
+                    authButton.textContent = "Login / Signup";
+                    authButton.dataset.tab = 'account';
+                    authStatus.classList.remove('hidden');
+                    userDetails.classList.add('hidden');
+                    authStatus.textContent = 'You are not logged in. Sign in anonymously or use your existing account.';
+                }
+            });
+
+            // Handle the generate button click for AI image generation
+            generateBtn.addEventListener('click', async () => {
+                const prompt = designPromptInput.value.trim();
+                if (!prompt) {
+                    showMessage("Please enter a description for your design.", 'error');
+                    return;
+                }
+
+                loadingSpinner.classList.remove('hidden');
+                designOutput.classList.add('hidden');
+                messageBox.classList.add('hidden');
+                
+                let imageUrl = '';
+                try {
+                    // Gemini API call for image generation
+                    const payload = {
+                        instances: { prompt: prompt },
+                        parameters: { "sampleCount": 1 }
+                    };
+                    const apiKey = ""; // Leave as-is for the environment to inject
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        generatedImage.src = imageUrl;
+                        designOutput.classList.remove('hidden');
+                    } else {
+                        throw new Error("Invalid response format from image generation API.");
+                    }
+
+                } catch (error) {
+                    console.error('Error generating image:', error);
+                    showMessage("Failed to generate design. Please try again.", 'error');
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            });
+            
+            // Handle the add to cart button click
+            addToCartBtn.addEventListener('click', async () => {
+                const auth = window.firebase.auth;
+                const db = window.firebase.db;
+                const appId = window.firebase.appId;
+                
+                if (!auth.currentUser) {
+                    showMessage("Please log in to add items to your cart.", 'error');
+                    return;
+                }
+                
+                const userId = auth.currentUser.uid;
+                const designData = generatedImage.src; // Using the base64 string as data
+
+                // Create a document path for the user's saved designs
+                const docPath = `/artifacts/${appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
+
+                try {
+                    await setDoc(doc(db, docPath), {
+                        designImage: designData,
+                        createdAt: new Date()
+                    });
+                    showMessage("Design added to your account! You can view it in the Account section.", 'info');
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    showMessage("Failed to save design. Please try again.", 'error');
+                }
+            });
+        };
+    </script>
+    
+</body>
+</html>
