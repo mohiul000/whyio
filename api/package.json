@@ -1,0 +1,9 @@
+{
+  "name": "whyio-tshirt-designer",
+  "version": "1.0.0",
+  "description": "Vercel project configuration for the Whyio design application.",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
