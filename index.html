@@ -78,10 +78,17 @@
         <!-- Header Section -->
         <header class="bg-gray-800 shadow-xl py-4 px-6 md:px-8 w-full fixed top-0 left-0 z-50">
             <nav class="flex justify-between items-center max-w-7xl mx-auto">
-                <div class="flex items-center space-x-2">
-                    <img src="https://placehold.co/40x40/0d0d0d/ffffff?text=W" alt="Whyio Brand Logo" class="h-10 rounded-full">
-                    <a href="#" class="text-3xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors">WHYIO</a>
-                </div>
+                <!-- LOGO SECTION START -->
+                <a href="#" class="flex items-center space-x-3">
+                    <!-- REMINDER: Replace this placeholder URL with the public link to your Whyio logo image. -->
+                    <img id="mainLogo" 
+                         src="D:\dbms projects\Whyio\img\whyioLOGO.jpg" 
+                         alt="Whyio Brand Logo" 
+                         class="h-10 w-auto rounded-md object-contain"
+                         onerror="this.onerror=null; this.parentElement.innerHTML = '<span class=\'text-3xl font-bold text-gray-50 tracking-wide\'>WHYIO</span>'">
+                    <span class="text-2xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors hidden sm:inline">WHYIO</span>
+                </a>
+                <!-- LOGO SECTION END -->
                 <div class="hidden md:flex space-x-8">
                     <!-- Tab buttons to switch between sections -->
                     <button class="nav-link tab-button text-blue-400 font-medium hover:text-blue-400 transition-colors" data-tab="home">Home</button>
@@ -266,8 +273,11 @@
                 btn.classList.remove('text-blue-400');
                 btn.classList.add('text-gray-400');
             });
-            document.querySelector(`[data-tab="${tabName}"]`).classList.add('text-blue-400');
-            document.querySelector(`[data-tab="${tabName}"]`).classList.remove('text-gray-400');
+            const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('text-blue-400');
+                activeBtn.classList.remove('text-gray-400');
+            }
         }
 
         // Add event listeners to switch tabs
@@ -295,6 +305,22 @@
         window.onload = function() {
             const auth = window.firebase.auth;
             const initialAuthToken = window.firebase.initialAuthToken;
+
+            // Try to authenticate with the provided token or anonymously
+            async function authenticate() {
+                try {
+                    if (initialAuthToken) {
+                        await window.firebase.signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Authenticated using custom token.");
+                    } else {
+                        await window.firebase.signInAnonymously(auth);
+                        console.log("Authenticated anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Firebase Auth error:", error);
+                }
+            }
+            authenticate();
 
             // Wait for auth state to be ready
             window.firebase.onAuthStateChanged(auth, async (user) => {
@@ -327,41 +353,57 @@
                 messageBox.classList.add('hidden');
                 
                 let imageUrl = '';
-                try {
-                    // Gemini API call for image generation
-                    const payload = {
-                        instances: { prompt: prompt },
-                        parameters: { "sampleCount": 1 }
-                    };
-                    const apiKey = ""; // Leave as-is for the environment to inject
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
-                    
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                let maxRetries = 3;
+                let delay = 1000;
+                
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        // Gemini API call for image generation
+                        const payload = {
+                            instances: { prompt: prompt },
+                            parameters: { "sampleCount": 1 }
+                        };
+                        const apiKey = ""; // Leave as-is for the environment to inject
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                        
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const result = await response.json();
-                    
-                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                        imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-                        generatedImage.src = imageUrl;
-                        designOutput.classList.remove('hidden');
-                    } else {
-                        throw new Error("Invalid response format from image generation API.");
-                    }
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            // Handle throttling with exponential backoff
+                            console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                            continue;
+                        }
 
-                } catch (error) {
-                    console.error('Error generating image:', error);
-                    showMessage("Failed to generate design. Please try again.", 'error');
-                } finally {
-                    loadingSpinner.classList.add('hidden');
-                }
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        
+                        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                            imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                            generatedImage.src = imageUrl;
+                            designOutput.classList.remove('hidden');
+                            break; // Success
+                        } else {
+                            throw new Error("Invalid response format from image generation API.");
+                        }
+
+                    } catch (error) {
+                        console.error('Error generating image:', error);
+                        if (i === maxRetries - 1) {
+                            showMessage("Failed to generate design after multiple attempts. Please try again.", 'error');
+                        }
+                    }
+                } // End retry loop
+                
+                loadingSpinner.classList.add('hidden');
             });
             
             // Handle the add to cart button click
@@ -378,18 +420,37 @@
                 const userId = auth.currentUser.uid;
                 const designData = generatedImage.src; // Using the base64 string as data
 
+                // Path for private user data: /artifacts/{appId}/users/{userId}/savedDesigns/{documentId}
+                const designsCollectionRef = window.firebase.getFirestore(window.firebase.app);
+
                 // Create a document path for the user's saved designs
-                const docPath = `/artifacts/${appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
+                const docPath = `artifacts/${appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
 
                 try {
                     await setDoc(doc(db, docPath), {
                         designImage: designData,
-                        createdAt: new Date()
+                        prompt: designPromptInput.value.trim(),
+                        createdAt: new Date().toISOString()
                     });
                     showMessage("Design added to your account! You can view it in the Account section.", 'info');
                 } catch (e) {
                     console.error("Error adding document: ", e);
                     showMessage("Failed to save design. Please try again.", 'error');
+                }
+            });
+
+            // Handle Logout
+            document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+                const auth = window.firebase.auth;
+                try {
+                    // Re-authenticate anonymously after sign-out to maintain a session
+                    await auth.signOut();
+                    await window.firebase.signInAnonymously(auth);
+                    showMessage("Signed out successfully. You are now browsing anonymously.", 'info');
+                    showTab('home'); // Go back to home page
+                } catch (e) {
+                    console.error("Logout error: ", e);
+                    showMessage("Failed to log out.", 'error');
                 }
             });
         };
