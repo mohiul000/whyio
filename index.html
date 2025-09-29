@@ -95,7 +95,6 @@
             <nav class="flex justify-between items-center max-w-7xl mx-auto">
                 <!-- LOGO SECTION START -->
                 <a href="#" class="flex items-center space-x-3">
-                    <!-- FIX: Updated the source path to reference the file uploaded to GitHub/Vercel -->
                     <img id="mainLogo" 
                          src="./img/whyioLOGO.jpg" 
                          alt="Whyio Brand Logo" 
@@ -182,7 +181,7 @@
                     <p class="text-gray-400 mb-6 text-center">Describe the design or modification you want for your t-shirt, optionally providing a reference image.</p>
 
                     <div class="w-full max-w-md space-y-4">
-                        <!-- NEW: Image Upload Field -->
+                        <!-- Image Upload Field -->
                         <div>
                             <label for="imageUpload" class="block text-gray-300 font-medium mb-2">Upload Reference Image (Optional)</label>
                             <input type="file" id="imageUpload" accept="image/png, image/jpeg" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400">
@@ -274,7 +273,15 @@
         </div>
     </footer>
     <script>
-        // Use a single script block for all JS logic
+        // =========================================================================
+        // DEPRECATED: API Key is now handled securely on the server-side (Vercel API Route)
+        // Leaving the variables here for compatibility with the execution environment,
+        // but the core generation logic no longer uses them.
+        // =========================================================================
+        const USER_SUPPLIED_GEMINI_KEY = ""; // PASTE YOUR KEY INTO VERCEL ENVIRONMENT VARIABLES INSTEAD!
+        const apiKey = USER_SUPPLIED_GEMINI_KEY || ""; 
+        // =========================================================================
+
         const tabs = {
             home: document.getElementById('home-section'),
             customDesigns: document.getElementById('customDesigns-section'),
@@ -293,7 +300,7 @@
         const userDetails = document.getElementById('userDetails');
         const authStatus = document.getElementById('authStatus');
         
-        // NEW ELEMENTS FOR IMAGE UPLOAD
+        // Elements for Image Upload
         const imageUpload = document.getElementById('imageUpload');
         const imagePreviewContainer = document.getElementById('imagePreviewContainer');
         const imagePreview = document.getElementById('imagePreview');
@@ -329,9 +336,7 @@
         // Function to show a message in the message box
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
-            messageBox.classList.remove('hidden', 'bg-red-900', 'bg-blue-900', 'text-red-300', 'text-blue-300', 'bg-yellow-900', 'text-yellow-300');
-            
-            // Clear all previous background/text color classes
+            // Clear all previous background/text color classes and unhide
             messageBox.className = 'mt-6 p-4 rounded-lg w-full max-w-md text-center';
 
             if (type === 'error') {
@@ -347,6 +352,7 @@
         function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
+                // Read the file as a data URL, which includes the mime type header
                 reader.readAsDataURL(file);
                 reader.onload = () => resolve(reader.result.split(',')[1]); // Resolve only the base64 data part
                 reader.onerror = error => reject(error);
@@ -357,6 +363,13 @@
         imageUpload.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
+                if (!file.type.startsWith('image/')) {
+                    showMessage("Invalid file type. Please upload an image (PNG or JPEG).", 'error');
+                    imageUpload.value = '';
+                    imagePreviewContainer.classList.add('hidden');
+                    return;
+                }
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     imagePreview.src = e.target.result;
@@ -388,10 +401,10 @@
                 try {
                     if (initialAuthToken) {
                         await window.firebase.signInWithCustomToken(auth, initialAuthToken);
-                        console.log("Authenticated using custom token.");
+                        console.log("Firebase: Authenticated using custom token.");
                     } else {
                         await window.firebase.signInAnonymously(auth);
-                        console.log("Authenticated anonymously.");
+                        console.log("Firebase: Authenticated anonymously.");
                     }
                 } catch (error) {
                     console.error("Firebase Auth error:", error);
@@ -417,7 +430,7 @@
                 }
             });
 
-            // Handle the generate button click for AI image generation
+            // Handle the generate button click for AI image generation (NOW CALLS VERCEL API ROUTE)
             generateBtn.addEventListener('click', async () => {
                 const prompt = designPromptInput.value.trim();
                 const isMultimodal = uploadedBase64Image !== null;
@@ -426,7 +439,7 @@
                     showMessage("Please enter a text description or upload an image to generate a design.", 'error');
                     return;
                 }
-
+                
                 loadingSpinner.classList.remove('hidden');
                 designOutput.classList.add('hidden');
                 messageBox.classList.add('hidden');
@@ -437,53 +450,22 @@
                 
                 for (let i = 0; i < maxRetries; i++) {
                     try {
-                        let apiUrl;
-                        let payload;
+                        // --- IMPORTANT CHANGE: CALLING VERCEL API ROUTE ---
+                        const fullApiUrl = `/api/design-generator`; 
                         
-                        if (isMultimodal) {
-                            // SCENARIO 1: Image-to-Image / Multimodal Generation (Uses Gemini 2.5 Flash Image Preview)
-                            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=`;
-                            
-                            const parts = [];
-                            if (prompt) {
-                                // Add text instruction part
-                                parts.push({ text: prompt });
-                            } else {
-                                // If only image, add a generic prompt to generate a new image based on it
-                                parts.push({ text: "Generate a high-resolution, unique t-shirt design based on the content and style of this image." });
-                            }
-                            
-                            // Add image data part
-                            parts.push({
-                                inlineData: {
-                                    mimeType: imageUpload.files[0].type, // Use the actual mime type of the file
-                                    data: uploadedBase64Image
-                                }
-                            });
+                        // Prepare the data payload for the Vercel API route
+                        const dataPayload = {
+                            prompt: prompt,
+                            image: isMultimodal ? {
+                                base64Data: uploadedBase64Image,
+                                mimeType: imageUpload.files[0].type
+                            } : null,
+                        };
 
-                            payload = {
-                                contents: [{ parts: parts }],
-                                generationConfig: {
-                                    responseModalities: ['TEXT', 'IMAGE']
-                                },
-                            };
-
-                        } else {
-                            // SCENARIO 2: Text-Only Generation (Uses Imagen 3.0)
-                            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=`;
-                            payload = {
-                                instances: { prompt: prompt },
-                                parameters: { "sampleCount": 1 }
-                            };
-                        }
-
-                        const apiKey = "AIzaSyDoRip3bbUeMX8XZA5f4J8mM2_4cpB1Ys8"; // Leave as-is for the environment to inject
-                        const fullApiUrl = `${apiUrl}${apiKey}`;
-                        
                         const response = await fetch(fullApiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify(dataPayload)
                         });
 
                         if (response.status === 429 && i < maxRetries - 1) {
@@ -494,21 +476,14 @@
                         }
 
                         if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                            const errorResult = await response.json();
+                            const errorMessage = errorResult.error || `API Request failed with status: ${response.status}. Please check your Vercel logs and Google Cloud Billing.`;
+                            console.error("Vercel API Error Response:", errorResult);
+                            throw new Error(errorMessage);
                         }
                         
                         const result = await response.json();
-                        let base64Data = null;
-
-                        if (isMultimodal) {
-                             // Extract image data from Gemini 2.5 Flash Image Preview response
-                            base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                        } else {
-                            // Extract image data from Imagen 3.0 response
-                            if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                                base64Data = result.predictions[0].bytesBase64Encoded;
-                            }
-                        }
+                        let base64Data = result.base64Data;
                         
                         if (base64Data) {
                             imageUrl = `data:image/png;base64,${base64Data}`;
@@ -516,13 +491,13 @@
                             designOutput.classList.remove('hidden');
                             break; // Success
                         } else {
-                            throw new Error("Invalid image data received from API.");
+                            throw new Error("No image data received from the generator service.");
                         }
 
                     } catch (error) {
                         console.error('Error generating image:', error);
                         if (i === maxRetries - 1) {
-                            showMessage("Failed to generate design after multiple attempts. Please try again.", 'error');
+                            showMessage(`Failed to generate design. Error: ${error.message}`, 'error');
                         }
                     }
                 } // End retry loop
