@@ -11,8 +11,8 @@
     <!-- Firebase Libraries (MUST BE TYPE="MODULE") -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         setLogLevel('Debug');
@@ -36,32 +36,30 @@
                 firebaseInitialized = true;
                 console.log("Firebase: SDK initialized successfully.");
             } else {
-                console.warn("Firebase: SDK NOT fully initialized. Missing configuration. This is expected outside the Canvas environment.");
-                // Create mock objects to prevent hard crashes
-                app = { options: firebaseConfig };
-                auth = { currentUser: null, onAuthStateChanged: (a, b) => b(null), signInAnonymously: async() => ({ user: { uid: 'mock-user' } }), signOut: async() => {} };
-                db = null;
+                console.warn("Firebase: SDK NOT fully initialized. Missing configuration.");
             }
         } catch(error) {
-             console.error("Firebase Initialization Failed (auth/invalid-api-key expected):", error);
-             // Create mock objects on initialization failure to prevent application crash
-             app = { options: firebaseConfig };
-             auth = { currentUser: null, onAuthStateChanged: (a, b) => b(null), signInAnonymously: async() => ({ user: { uid: 'mock-user' } }), signOut: async() => {} };
-             db = null;
+             console.error("Firebase Initialization Failed (auth/invalid-api-key expected in some environments):", error);
+             // On failure, create mock objects to prevent application crash
         }
+
+        // Create mock objects or use initialized ones
+        const finalAuth = auth || { currentUser: null, onAuthStateChanged: (a, b) => b(null), signInAnonymously: async() => ({ user: { uid: 'mock-user-' + crypto.randomUUID() } }), signOut: async() => {} };
+        const finalDb = db || null;
 
         // Expose the necessary components globally after initialization attempt
         window.firebase = {
-            auth,
-            db,
+            auth: finalAuth,
+            db: finalDb,
             app,
             appId,
             initialAuthToken,
             onAuthStateChanged,
             signInAnonymously,
             signInWithCustomToken,
+            signOut, // Expose signOut
             getFirestore,
-            isInitialized: firebaseInitialized
+            isInitialized: firebaseInitialized || !Object.keys(firebaseConfig).length
         };
     </script>
     <style>
@@ -262,43 +260,14 @@
     <!-- Footer Section -->
     <footer class="bg-gray-800 text-gray-400 py-8 px-6 mt-12 w-full rounded-t-lg">
         <div class="max-w-7xl mx-auto text-center md:text-left">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                    <h3 class="text-lg font-bold mb-2 text-gray-200">Whyio</h3>
-                    <p class="text-sm text-gray-500">Find Your Why. And Write Your Own Story.</p>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold mb-2 text-gray-200">Shop</h3>
-                    <ul class="text-sm space-y-1">
-                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">T-Shirts</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">Polo Shirts</a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" data-tab="shop">Drop Shoulder Tees</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold mb-2 text-gray-200">Follow Us</h3>
-                    <div class="flex justify-center md:justify-start space-x-4">
-                        <!-- SVG icons for social media -->
-                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V15h-2.91v-3h2.91V9.22c0-3.95 2.413-6.11 5.927-6.11 1.696 0 3.153.12 3.585.174v2.91h-1.72c-1.687 0-2.015.8-2.015 1.977V12h3.254l-.527 3h-2.727v6.879C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" /></svg></a>
-                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c2.715 0 3.056.01 4.12.06a4.72 4.72 0 011.666.315 2.872 2.872 0 011.603 1.603c.15.485.255.97.315 1.666.05.74.06 1.08.06 4.12s-.01 3.056-.06 4.12a4.72 4.72 0 01-.315 1.666 2.872 2.872 0 01-1.603 1.603c-.485.15-.97.255-1.666.315-.74.05-1.08.06-4.12.06s-3.056-.01-4.12-.06a4.72 4.72 0 01-1.666-.315 2.872 2.872 0 01-1.603-1.603c-.15-.485-.255-.97-.315-1.666-.05-.74-.06-1.08-.06-4.12s.01-3.056.06-4.12a4.72 4.72 0 01.315-1.666 2.872 2.872 0 011.603-1.603c.485-.15.97-.255 1.666-.315.74-.05 1.08-.06 4.12-.06zM12 7a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z" /></svg></a>
-                        <a href="#" class="hover:text-white transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.89 1.153C19.78 1.153 20.35 1.724 20.35 2.615v18.77c0 .89-.571 1.46-1.46 1.46H2.614c-.89 0-1.46-.57-1.46-1.46V2.615c0-.89.57-1.46 1.46-1.46H18.89zM8.347 18.067V9.752h-2.61V18.067H8.347zm-1.305-9.45c.87 0 1.58-.71 1.58-1.58s-.71-1.58-1.58-1.58c-.87 0-1.58.71-1.58 1.58s.71 1.58 1.58 1.58zm12.925 9.45V13.84c0-2.31-1.15-3.53-2.91-3.53-1.47 0-2.36.87-2.73 1.76h-.04v-1.54H12.42v8.465H15v-5.21c0-.42.08-.85.24-1.15.16-.3.44-.57.94-.57 1.14 0 1.59.87 1.59 2.15v4.78h2.61v-6.93z" /></svg></a>
-                    </div>
-                </div>
-            </div>
             <div class="border-t border-gray-700 mt-8 pt-4 text-center">
                 <p class="text-sm text-gray-500">&copy; 2024 Whyio. All rights reserved.</p>
             </div>
         </div>
     </footer>
     <script>
-        // =========================================================================
-        // DEPRECATED: API Key is now handled securely on the server-side (Vercel API Route)
-        // Leaving the variables here for compatibility with the execution environment,
-        // but the core generation logic no longer uses them.
-        // =========================================================================
-        const USER_SUPPLIED_GEMINI_KEY = ""; // PASTE YOUR KEY INTO VERCEL ENVIRONMENT VARIABLES INSTEAD!
-        const apiKey = USER_SUPPLIED_GEMINI_KEY || ""; 
-        // =========================================================================
+        // API Key is automatically handled by the environment if left blank.
+        const apiKey = ""; 
 
         const tabs = {
             home: document.getElementById('home-section'),
@@ -354,6 +323,7 @@
             } else {
                  messageBox.classList.add('bg-gray-700', 'text-gray-300');
             }
+            messageBox.classList.remove('hidden');
         }
 
         // Helper function to read image file and convert to base64
@@ -362,7 +332,8 @@
                 const reader = new FileReader();
                 // Read the file as a data URL, which includes the mime type header
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]); // Resolve only the base64 data part
+                // Resolve only the base64 data part (after the comma)
+                reader.onload = () => resolve(reader.result.split(',')[1]); 
                 reader.onerror = error => reject(error);
             });
         }
@@ -430,15 +401,15 @@
                     }
                 } catch (error) {
                     console.error("Firebase Auth error during authentication:", error);
-                    showMessage("Authentication failed. Check Firebase config.", 'error');
+                    showMessage("Authentication failed. Check console for Firebase config errors.", 'error');
                 }
             }
             
-            // Only run authentication if the SDK was initialized without critical error
-            if (firebase.isInitialized) {
+            // Only run authentication if the SDK was initialized or if we are using mock auth
+            if (firebase.isInitialized || !firebase.app) {
                  authenticate();
             } else {
-                 console.warn("Skipping authentication due to Firebase configuration issues.");
+                 console.warn("Skipping authentication due to critical Firebase configuration issues.");
             }
            
 
@@ -450,7 +421,7 @@
                     authStatus.classList.add('hidden');
                     userDetails.classList.remove('hidden');
                     userIdDisplay.textContent = user.uid;
-                    statusDisplay.textContent = 'Authenticated';
+                    statusDisplay.textContent = user.isAnonymous ? 'Authenticated Anonymously' : 'Authenticated';
                 } else {
                     authButton.textContent = "Login / Signup";
                     authButton.dataset.tab = 'account';
@@ -460,7 +431,7 @@
                 }
             });
 
-            // Handle the generate button click for AI image generation (NOW CALLS VERCEL API ROUTE)
+            // Handle the generate button click for AI image generation (DIRECT API CALL)
             generateBtn.addEventListener('click', async () => {
                 const prompt = designPromptInput.value.trim();
                 const isMultimodal = uploadedBase64Image !== null;
@@ -477,51 +448,87 @@
                 let imageUrl = '';
                 let maxRetries = 3;
                 let delay = 1000;
-                
+                let finalBase64Data = null;
+
                 for (let i = 0; i < maxRetries; i++) {
                     try {
-                        // --- IMPORTANT CHANGE: CALLING VERCEL API ROUTE ---
-                        const fullApiUrl = `/api/design-generator`; 
-                        
-                        // Prepare the data payload for the Vercel API route
-                        const dataPayload = {
-                            prompt: prompt,
-                            image: isMultimodal ? {
-                                base64Data: uploadedBase64Image,
-                                mimeType: imageUpload.files[0].type
-                            } : null,
-                        };
+                        let response, result;
 
-                        const response = await fetch(fullApiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(dataPayload)
-                        });
+                        if (isMultimodal) {
+                            // --- Multimodal (Image Editing/Transformation) using gemini-2.5-flash-image-preview ---
+                            const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+                            
+                            const contents = [];
+                            // 1. Add image part
+                            contents.push({
+                                inlineData: {
+                                    mimeType: imageUpload.files[0].type,
+                                    data: uploadedBase64Image
+                                }
+                            });
+                            // 2. Add text part (or default if prompt is empty)
+                            contents.push({ text: prompt || "Redraw this image as a creative t-shirt graphic." });
+
+                            const payload = {
+                                contents: [{ parts: contents }],
+                                generationConfig: {
+                                    responseModalities: ['TEXT', 'IMAGE']
+                                }
+                            };
+
+                            response = await fetch(modelUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            result = await response.json();
+                            // Extract base64 data from the complex multimodal response structure
+                            finalBase64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+
+                        } else {
+                            // --- Text-to-Image Generation using imagen-3.0-generate-002 ---
+                            const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                            const payload = {
+                                instances: [{ prompt: prompt }],
+                                parameters: { 
+                                    sampleCount: 1,
+                                    aspectRatio: "1:1"
+                                }
+                            };
+
+                            response = await fetch(modelUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            result = await response.json();
+                            // Extract base64 data from the simple Imagen prediction response structure
+                            finalBase64Data = result.predictions && result.predictions.length > 0 ? result.predictions[0].bytesBase64Encoded : null;
+                        }
 
                         if (response.status === 429 && i < maxRetries - 1) {
                             console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
                             await new Promise(resolve => setTimeout(resolve, delay));
                             delay *= 2; // Exponential backoff
-                            continue;
+                            continue; // Retry
                         }
 
                         if (!response.ok) {
-                            const errorResult = await response.json();
-                            const errorMessage = errorResult.error || `API Request failed with status: ${response.status}. Please check your Vercel logs and Google Cloud Billing.`;
-                            console.error("Vercel API Error Response:", errorResult);
-                            throw new Error(errorMessage);
+                            const errorResult = result.error || await response.text();
+                            console.error("API Error Response:", errorResult);
+                            throw new Error(`AI generation failed (${response.status}). Details in console.`);
                         }
                         
-                        const result = await response.json();
-                        let base64Data = result.base64Data;
-                        
-                        if (base64Data) {
-                            imageUrl = `data:image/png;base64,${base64Data}`;
+                        if (finalBase64Data) {
+                            imageUrl = `data:image/png;base64,${finalBase64Data}`;
                             generatedImage.src = imageUrl;
                             designOutput.classList.remove('hidden');
                             break; // Success
                         } else {
-                            throw new Error("No image data received from the generator service.");
+                            throw new Error("No image data received from the generator service. Check if the prompt was censored.");
                         }
 
                     } catch (error) {
@@ -535,7 +542,8 @@
                 loadingSpinner.classList.add('hidden');
             });
             
-            // Handle the add to cart button click
+            // Handle the add to cart button click (Saves to Firestore)
+            const addToCartBtn = document.getElementById('addToCartBtn');
             addToCartBtn.addEventListener('click', async () => {
                 if (!auth.currentUser) {
                     showMessage("Please log in to add items to your cart.", 'error');
@@ -548,18 +556,15 @@
                 }
                 
                 if (!firebase.db) {
-                     showMessage("Database connection failed. Cannot save design.", 'error');
+                     showMessage("Database connection failed. Cannot save design. Ensure Firebase is configured correctly.", 'error');
                      return;
                 }
 
                 const userId = auth.currentUser.uid;
-                const designData = generatedImage.src; // Using the base64 string as data
+                const designData = generatedImage.src; 
 
                 // Path for private user data: /artifacts/{appId}/users/{userId}/savedDesigns/{documentId}
-                // We use the db instance from the shared global object
                 const db = firebase.db; 
-
-                // Create a document path for the user's saved designs
                 const docPath = `artifacts/${firebase.appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
 
                 try {
@@ -568,18 +573,18 @@
                         prompt: designPromptInput.value.trim() || 'Image-based generation',
                         createdAt: new Date().toISOString()
                     });
-                    showMessage("Design added to your account! You can view it in the Account section.", 'info');
+                    showMessage("Design added to your account! Saved to Firestore.", 'info');
                 } catch (e) {
-                    console.error("Error adding document: ", e);
-                    showMessage("Failed to save design. Please try again.", 'error');
+                    console.error("Error adding document to Firestore: ", e);
+                    showMessage("Failed to save design. Please ensure your Firebase security rules allow writes.", 'error');
                 }
             });
 
             // Handle Logout
             document.getElementById('logoutBtn')?.addEventListener('click', async () => {
                 try {
+                    await firebase.signOut(auth);
                     // Re-authenticate anonymously after sign-out to maintain a session
-                    await auth.signOut();
                     await firebase.signInAnonymously(auth);
                     showMessage("Signed out successfully. You are now browsing anonymously.", 'info');
                     showTab('home'); // Go back to home page
@@ -591,7 +596,6 @@
         }
         
         // Wait for the DOMContentLoaded event before attempting to access DOM elements
-        // and ensure the Firebase module is fully loaded.
         document.addEventListener('DOMContentLoaded', () => {
             // Wait briefly for the type="module" script to ensure `window.firebase` is set
             setTimeout(() => {
