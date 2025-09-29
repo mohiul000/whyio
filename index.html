@@ -68,6 +68,21 @@
         .tab-button {
             transition: color 0.3s, background-color 0.3s;
         }
+        /* Custom file input styling */
+        input[type="file"]::file-selector-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 9999px; /* rounded-full */
+            margin-right: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: #2563eb;
+        }
     </style>
 </head>
 <body class="bg-gray-900 antialiased flex flex-col min-h-screen text-gray-200">
@@ -80,7 +95,7 @@
             <nav class="flex justify-between items-center max-w-7xl mx-auto">
                 <!-- LOGO SECTION START -->
                 <a href="#" class="flex items-center space-x-3">
-                    <!-- REMINDER: Replace this placeholder URL with the pubgit add index.htmllic link to your Whyio logo image. -->
+                    <!-- FIX: Updated the source path to reference the file uploaded to GitHub/Vercel -->
                     <img id="mainLogo" 
                          src="./img/whyioLOGO.jpg" 
                          alt="Whyio Brand Logo" 
@@ -164,20 +179,35 @@
             <div id="customDesigns-section" class="tab-content" style="display: none;">
                 <div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center">
                     <h2 class="text-3xl font-bold text-gray-100 mb-6">Create Your Own Design</h2>
-                    <p class="text-gray-400 mb-6 text-center">Describe the design you want for your t-shirt and our AI will generate it for you.</p>
+                    <p class="text-gray-400 mb-6 text-center">Describe the design or modification you want for your t-shirt, optionally providing a reference image.</p>
 
-                    <div class="w-full max-w-md">
-                        <label for="designPrompt" class="block text-gray-300 font-medium mb-2">Design Prompt</label>
-                        <input type="text" id="designPrompt" placeholder="E.g., A futuristic cyberpunk cat wearing sunglasses" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500">
+                    <div class="w-full max-w-md space-y-4">
+                        <!-- NEW: Image Upload Field -->
+                        <div>
+                            <label for="imageUpload" class="block text-gray-300 font-medium mb-2">Upload Reference Image (Optional)</label>
+                            <input type="file" id="imageUpload" accept="image/png, image/jpeg" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400">
+                        </div>
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreviewContainer" class="hidden mt-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
+                            <img id="imagePreview" class="max-h-48 w-auto mx-auto rounded-md shadow-inner object-contain" alt="Image Preview">
+                        </div>
+
+                        <!-- Existing Text Prompt Field -->
+                        <div>
+                            <label for="designPrompt" class="block text-gray-300 font-medium mb-2">Text Instruction</label>
+                            <input type="text" id="designPrompt" placeholder="E.g., Transform this into a retro 8-bit style, or a futuristic cyberpunk cat" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
                     </div>
 
                     <button id="generateBtn" class="mt-6 btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50">Generate Design</button>
 
-                    <div id="loading" class="mt-6 text-blue-400 hidden">
+                    <div id="loading" class="mt-6 text-blue-400 hidden flex items-center space-x-3">
                         <svg class="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                         </svg>
+                        <span>Generating your design...</span>
                     </div>
 
                     <div id="designOutput" class="mt-8 hidden w-full max-w-md">
@@ -186,7 +216,7 @@
                         <button id="addToCartBtn" class="mt-4 w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Add to Cart</button>
                     </div>
 
-                    <div id="messageBox" class="mt-6 p-4 rounded-lg hidden"></div>
+                    <div id="messageBox" class="mt-6 p-4 rounded-lg hidden w-full max-w-md text-center"></div>
                 </div>
             </div>
 
@@ -262,6 +292,12 @@
         const statusDisplay = document.getElementById('statusDisplay');
         const userDetails = document.getElementById('userDetails');
         const authStatus = document.getElementById('authStatus');
+        
+        // NEW ELEMENTS FOR IMAGE UPLOAD
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        let uploadedBase64Image = null; // Stores the base64 string of the uploaded image
 
         // Function to show/hide sections
         function showTab(tabName) {
@@ -293,15 +329,56 @@
         // Function to show a message in the message box
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
-            messageBox.classList.remove('hidden', 'bg-red-900', 'bg-blue-900', 'text-red-300', 'text-blue-300');
+            messageBox.classList.remove('hidden', 'bg-red-900', 'bg-blue-900', 'text-red-300', 'text-blue-300', 'bg-yellow-900', 'text-yellow-300');
+            
+            // Clear all previous background/text color classes
+            messageBox.className = 'mt-6 p-4 rounded-lg w-full max-w-md text-center';
+
             if (type === 'error') {
                 messageBox.classList.add('bg-red-900', 'text-red-300');
-            } else {
+            } else if (type === 'info') {
                 messageBox.classList.add('bg-blue-900', 'text-blue-300');
+            } else {
+                 messageBox.classList.add('bg-gray-700', 'text-gray-300');
             }
         }
 
-        // Handle authentication status
+        // Helper function to read image file and convert to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Resolve only the base64 data part
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Handle image upload preview
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                    // Convert file to base64 for API use
+                    fileToBase64(file).then(base64Data => {
+                        uploadedBase64Image = base64Data;
+                    }).catch(error => {
+                        showMessage("Error processing image file.", 'error');
+                        console.error("File processing error:", error);
+                        uploadedBase64Image = null;
+                    });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreviewContainer.classList.add('hidden');
+                imagePreview.src = '';
+                uploadedBase64Image = null;
+            }
+        });
+
+        // Handle authentication status and main logic
         window.onload = function() {
             const auth = window.firebase.auth;
             const initialAuthToken = window.firebase.initialAuthToken;
@@ -343,8 +420,10 @@
             // Handle the generate button click for AI image generation
             generateBtn.addEventListener('click', async () => {
                 const prompt = designPromptInput.value.trim();
-                if (!prompt) {
-                    showMessage("Please enter a description for your design.", 'error');
+                const isMultimodal = uploadedBase64Image !== null;
+
+                if (!prompt && !isMultimodal) {
+                    showMessage("Please enter a text description or upload an image to generate a design.", 'error');
                     return;
                 }
 
@@ -358,22 +437,56 @@
                 
                 for (let i = 0; i < maxRetries; i++) {
                     try {
-                        // Gemini API call for image generation
-                        const payload = {
-                            instances: { prompt: prompt },
-                            parameters: { "sampleCount": 1 }
-                        };
-                        const apiKey = ""; // Leave as-is for the environment to inject
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                        let apiUrl;
+                        let payload;
                         
-                        const response = await fetch(apiUrl, {
+                        if (isMultimodal) {
+                            // SCENARIO 1: Image-to-Image / Multimodal Generation (Uses Gemini 2.5 Flash Image Preview)
+                            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=`;
+                            
+                            const parts = [];
+                            if (prompt) {
+                                // Add text instruction part
+                                parts.push({ text: prompt });
+                            } else {
+                                // If only image, add a generic prompt to generate a new image based on it
+                                parts.push({ text: "Generate a high-resolution, unique t-shirt design based on the content and style of this image." });
+                            }
+                            
+                            // Add image data part
+                            parts.push({
+                                inlineData: {
+                                    mimeType: imageUpload.files[0].type, // Use the actual mime type of the file
+                                    data: uploadedBase64Image
+                                }
+                            });
+
+                            payload = {
+                                contents: [{ parts: parts }],
+                                generationConfig: {
+                                    responseModalities: ['TEXT', 'IMAGE']
+                                },
+                            };
+
+                        } else {
+                            // SCENARIO 2: Text-Only Generation (Uses Imagen 3.0)
+                            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=`;
+                            payload = {
+                                instances: { prompt: prompt },
+                                parameters: { "sampleCount": 1 }
+                            };
+                        }
+
+                        const apiKey = ""; // Leave as-is for the environment to inject
+                        const fullApiUrl = `${apiUrl}${apiKey}`;
+                        
+                        const response = await fetch(fullApiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
 
                         if (response.status === 429 && i < maxRetries - 1) {
-                            // Handle throttling with exponential backoff
                             console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
                             await new Promise(resolve => setTimeout(resolve, delay));
                             delay *= 2; // Exponential backoff
@@ -385,14 +498,25 @@
                         }
                         
                         const result = await response.json();
+                        let base64Data = null;
+
+                        if (isMultimodal) {
+                             // Extract image data from Gemini 2.5 Flash Image Preview response
+                            base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                        } else {
+                            // Extract image data from Imagen 3.0 response
+                            if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                                base64Data = result.predictions[0].bytesBase64Encoded;
+                            }
+                        }
                         
-                        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-                            imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                        if (base64Data) {
+                            imageUrl = `data:image/png;base64,${base64Data}`;
                             generatedImage.src = imageUrl;
                             designOutput.classList.remove('hidden');
                             break; // Success
                         } else {
-                            throw new Error("Invalid response format from image generation API.");
+                            throw new Error("Invalid image data received from API.");
                         }
 
                     } catch (error) {
@@ -417,6 +541,11 @@
                     return;
                 }
                 
+                if (!generatedImage.src || generatedImage.src.startsWith('data:image/png;base64,') === false) {
+                     showMessage("Please generate a design first before trying to add it to the cart.", 'error');
+                     return;
+                }
+
                 const userId = auth.currentUser.uid;
                 const designData = generatedImage.src; // Using the base64 string as data
 
@@ -429,7 +558,7 @@
                 try {
                     await setDoc(doc(db, docPath), {
                         designImage: designData,
-                        prompt: designPromptInput.value.trim(),
+                        prompt: designPromptInput.value.trim() || 'Image-based generation',
                         createdAt: new Date().toISOString()
                     });
                     showMessage("Design added to your account! You can view it in the Account section.", 'info');
