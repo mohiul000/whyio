@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Firebase Libraries -->
+    <!-- Firebase Libraries (MUST BE TYPE="MODULE") -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -22,28 +22,46 @@
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        // Initialize Firebase
         let app;
         let auth;
         let db;
+        let firebaseInitialized = false;
 
-        // Use a flag to ensure Firebase is initialized only once
-        if (typeof window.firebaseInitialized === 'undefined') {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            window.firebaseInitialized = true;
+        try {
+            // Initialize Firebase only if the config seems valid
+            if (Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey && firebaseConfig.projectId) {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                firebaseInitialized = true;
+                console.log("Firebase: SDK initialized successfully.");
+            } else {
+                console.warn("Firebase: SDK NOT fully initialized. Missing configuration. This is expected outside the Canvas environment.");
+                // Create mock objects to prevent hard crashes
+                app = { options: firebaseConfig };
+                auth = { currentUser: null, onAuthStateChanged: (a, b) => b(null), signInAnonymously: async() => ({ user: { uid: 'mock-user' } }), signOut: async() => {} };
+                db = null;
+            }
+        } catch(error) {
+             console.error("Firebase Initialization Failed (auth/invalid-api-key expected):", error);
+             // Create mock objects on initialization failure to prevent application crash
+             app = { options: firebaseConfig };
+             auth = { currentUser: null, onAuthStateChanged: (a, b) => b(null), signInAnonymously: async() => ({ user: { uid: 'mock-user' } }), signOut: async() => {} };
+             db = null;
         }
 
+        // Expose the necessary components globally after initialization attempt
         window.firebase = {
             auth,
             db,
+            app,
             appId,
             initialAuthToken,
             onAuthStateChanged,
             signInAnonymously,
             signInWithCustomToken,
-            getFirestore
+            getFirestore,
+            isInitialized: firebaseInitialized
         };
     </script>
     <style>
@@ -247,7 +265,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div>
                     <h3 class="text-lg font-bold mb-2 text-gray-200">Whyio</h3>
-                    <p class="text-sm text-gray-500">Find Your Why And Write Your Own Story.</p>
+                    <p class="text-sm text-gray-500">Find Your Why. And Write Your Own Story.</p>
                 </div>
                 <div>
                     <h3 class="text-lg font-bold mb-2 text-gray-200">Shop</h3>
@@ -323,16 +341,6 @@
             }
         }
 
-        // Add event listeners to switch tabs
-        tabButtons.forEach(button => {
-            button.addEventListener('click', (event) => {
-                const tabName = event.target.dataset.tab;
-                if (tabName) {
-                    showTab(tabName);
-                }
-            });
-        });
-
         // Function to show a message in the message box
         function showMessage(message, type = 'info') {
             messageBox.textContent = message;
@@ -390,30 +398,52 @@
                 uploadedBase64Image = null;
             }
         });
+        
+        // =========================================================================
+        // CORE APPLICATION STARTUP FUNCTION
+        // Runs after all DOM elements are loaded AND Firebase Module is ready
+        // =========================================================================
+        function startApplication(firebase) {
+            
+            // Add event listeners to switch tabs
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const tabName = event.target.dataset.tab;
+                    if (tabName) {
+                        showTab(tabName);
+                    }
+                });
+            });
 
-        // Handle authentication status and main logic
-        window.onload = function() {
-            const auth = window.firebase.auth;
-            const initialAuthToken = window.firebase.initialAuthToken;
+            const auth = firebase.auth;
+            const initialAuthToken = firebase.initialAuthToken;
 
             // Try to authenticate with the provided token or anonymously
             async function authenticate() {
                 try {
                     if (initialAuthToken) {
-                        await window.firebase.signInWithCustomToken(auth, initialAuthToken);
+                        await firebase.signInWithCustomToken(auth, initialAuthToken);
                         console.log("Firebase: Authenticated using custom token.");
                     } else {
-                        await window.firebase.signInAnonymously(auth);
+                        await firebase.signInAnonymously(auth);
                         console.log("Firebase: Authenticated anonymously.");
                     }
                 } catch (error) {
-                    console.error("Firebase Auth error:", error);
+                    console.error("Firebase Auth error during authentication:", error);
+                    showMessage("Authentication failed. Check Firebase config.", 'error');
                 }
             }
-            authenticate();
+            
+            // Only run authentication if the SDK was initialized without critical error
+            if (firebase.isInitialized) {
+                 authenticate();
+            } else {
+                 console.warn("Skipping authentication due to Firebase configuration issues.");
+            }
+           
 
             // Wait for auth state to be ready
-            window.firebase.onAuthStateChanged(auth, async (user) => {
+            firebase.onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     authButton.textContent = "My Account";
                     authButton.dataset.tab = 'account';
@@ -507,10 +537,6 @@
             
             // Handle the add to cart button click
             addToCartBtn.addEventListener('click', async () => {
-                const auth = window.firebase.auth;
-                const db = window.firebase.db;
-                const appId = window.firebase.appId;
-                
                 if (!auth.currentUser) {
                     showMessage("Please log in to add items to your cart.", 'error');
                     return;
@@ -520,15 +546,21 @@
                      showMessage("Please generate a design first before trying to add it to the cart.", 'error');
                      return;
                 }
+                
+                if (!firebase.db) {
+                     showMessage("Database connection failed. Cannot save design.", 'error');
+                     return;
+                }
 
                 const userId = auth.currentUser.uid;
                 const designData = generatedImage.src; // Using the base64 string as data
 
                 // Path for private user data: /artifacts/{appId}/users/{userId}/savedDesigns/{documentId}
-                const designsCollectionRef = window.firebase.getFirestore(window.firebase.app);
+                // We use the db instance from the shared global object
+                const db = firebase.db; 
 
                 // Create a document path for the user's saved designs
-                const docPath = `artifacts/${appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
+                const docPath = `artifacts/${firebase.appId}/users/${userId}/savedDesigns/${crypto.randomUUID()}`;
 
                 try {
                     await setDoc(doc(db, docPath), {
@@ -545,11 +577,10 @@
 
             // Handle Logout
             document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-                const auth = window.firebase.auth;
                 try {
                     // Re-authenticate anonymously after sign-out to maintain a session
                     await auth.signOut();
-                    await window.firebase.signInAnonymously(auth);
+                    await firebase.signInAnonymously(auth);
                     showMessage("Signed out successfully. You are now browsing anonymously.", 'info');
                     showTab('home'); // Go back to home page
                 } catch (e) {
@@ -557,7 +588,20 @@
                     showMessage("Failed to log out.", 'error');
                 }
             });
-        };
+        }
+        
+        // Wait for the DOMContentLoaded event before attempting to access DOM elements
+        // and ensure the Firebase module is fully loaded.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait briefly for the type="module" script to ensure `window.firebase` is set
+            setTimeout(() => {
+                if (window.firebase) {
+                    startApplication(window.firebase);
+                } else {
+                    console.error("FATAL: window.firebase object not found after module load timeout.");
+                }
+            }, 100); 
+        });
     </script>
     
 </body>
