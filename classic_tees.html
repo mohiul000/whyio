@@ -12,11 +12,11 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d0d0d; /* Dark Background */
+            background-color: #0d0d0d; /* Dark Background - STANDARD */
             color: #e5e5e5;
         }
         .container-bg {
-            background-color: #1a1a1a;
+            background-color: #1a1a1a; /* Dark Container - STANDARD */
             border-color: #262626;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
@@ -29,6 +29,7 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
         }
+        /* Active link highlight for navigation */
         .nav-link.active {
             border-bottom: 2px solid #3b82f6;
             color: #3b82f6;
@@ -41,8 +42,22 @@
     <nav class="container-bg shadow-md sticky top-0 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <h1 class="text-3xl font-extrabold text-blue-500 tracking-wider">Whyio</h1>
+                <div class="flex items-center space-x-6">
+                    <!-- LOGO SECTION START -->
+                    <a href="#" class="flex items-center space-x-3">
+                        <img id="mainLogo" 
+                                src="./img/whyioLOGO.jpg" 
+                                alt="Whyio Brand Logo" 
+                                class="h-14 w-auto rounded-md object-contain"
+                                onerror="this.onerror=null; this.parentElement.innerHTML = '<span class=\'text-3xl font-bold text-gray-50 tracking-wide\'>WHYIO</span>'">
+                        <span class="text-2xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors hidden sm:inline">WHYIO</span>
+                    </a>
+                    <!-- LOGO SECTION END -->
+                    
+                    <!-- REINFORCEMENT TAGLINE (Placement 3: Header reinforcement) -->
+                    <p class="hidden lg:block text-sm text-gray-400 font-medium italic">
+                        Your one-stop shop for self-expression.
+                    </p>
                 </div>
                 <div class="flex space-x-4 items-center">
                     <a href="index.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Home</a>
@@ -50,7 +65,7 @@
                     <a href="drop-shoulder-tees.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Drop-Shoulder Tees</a>
                     <a href="polo_shirts.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Polo Shirts</a>
                     <a href="#" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors relative">
-                        Cart (<span id="cartCount">0</span>)
+                        Orders (<span id="cartCount">0</span>)
                     </a>
                 </div>
                 <div class="flex items-center">
@@ -62,12 +77,11 @@
             </div>
         </div>
     </nav>
-
     <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
 
         <header class="text-center py-8 mb-8 container-bg rounded-xl border border-gray-700">
             <h2 class="text-4xl font-extrabold text-white mb-2">Classic T-Shirts Collection</h2>
-            <p class="text-lg text-gray-400">Timeless fits and premium cotton for everyday wear.</p>
+            <p class="text-lg text-gray-400">The essential comfort for everyday wear.</p>
         </header>
         
         <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -83,14 +97,105 @@
         <p id="messageText" class="font-medium"></p>
     </div>
 
-    <footer class="bg-gray-800 py-6 mt-12 w-full">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400 text-sm">
-            &copy; 2024 Whyio. All rights reserved. | 
-            <a href="#" class="hover:text-blue-400 transition-colors">Privacy Policy</a> | 
-            <a href="#" class="hover:text-blue-400 transition-colors">Terms of Service</a>
-        </div>
-    </footer>
+    <div id="checkoutModal" class="fixed inset-0 z-50 bg-black bg-opacity-75 hidden flex items-center justify-center p-4">
+        <div class="container-bg w-full max-w-lg rounded-xl shadow-2xl border border-gray-700 p-6 relative">
+            <button id="closeModalBtn" class="absolute top-3 right-3 text-gray-400 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <h3 class="text-2xl font-bold text-blue-400 mb-6 border-b border-gray-700 pb-2">Place Your Order</h3>
+            
+            <div class="mb-4 p-3 bg-gray-800 rounded">
+                <h4 class="text-lg font-semibold text-white">Item: <span id="modalProductName" class="font-normal text-gray-300"></span></h4>
+                <p class="text-sm text-gray-400">Price: <span id="modalProductPrice"></span></p>
+            </div>
 
+            <form id="orderForm" class="space-y-4">
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                    <input type="text" id="customerName" required class="w-full p-3 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400">
+                </div>
+                <div>
+                    <label for="customerAddress" class="block text-sm font-medium text-gray-300 mb-1">Delivery Address</label>
+                    <input type="text" id="customerAddress" required class="w-full p-3 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="customerPhone" class="block text-sm font-medium text-gray-300 mb-1">Phone Number</label>
+                        <input type="tel" id="customerPhone" required class="w-full p-3 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400">
+                    </div>
+                    <div>
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-300 mb-1">Email (Optional)</label>
+                        <input type="email" id="customerEmail" class="w-full p-3 border border-gray-600 rounded bg-gray-700 text-white placeholder-gray-400">
+                    </div>
+                </div>
+                
+                <button type="submit" id="placeOrderButton" class="btn-primary w-full text-white font-semibold py-3 rounded-lg mt-6 flex items-center justify-center space-x-2">
+                    <i data-lucide="package" class="w-5 h-5"></i>
+                    <span>Confirm Order</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    <footer class="bg-gray-900 py-10 mt-16 w-full border-t border-blue-900/50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8 text-gray-300">
+            
+            <div>
+                <h3 class="text-xl font-bold text-blue-400 mb-4">Whyio</h3>
+                <p class="text-sm text-gray-400 leading-relaxed">
+                    Design Your Story. Quality tees for every mood and occasion.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-semibold text-white mb-4">Shop</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="classic_tees.html" class="hover:text-blue-400 transition-colors">Classic Tees</a></li>
+                    <li><a href="drop-shoulder-tees.html" class="hover:text-blue-400 transition-colors">Drop-Shoulder Tees</a></li>
+                    <li><a href="polo_shirts.html" class="hover:text-blue-400 transition-colors">Polo Shirts</a></li>
+                    <li><a href="#" class="hover:text-blue-400 transition-colors">New Arrivals</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-semibold text-white mb-4">Info</h4>
+                <ul class="space-y-2 text-sm">
+                    <li><a href="#" class="hover:text-blue-400 transition-colors">Contact Us</a></li>
+                    <li><a href="#" class="hover:text-blue-400 transition-colors">Shipping & Returns</a></li>
+                    <li><a href="#" class="hover:text-blue-400 transition-colors">Privacy Policy</a></li>
+                    <li><a href="#" class="hover:text-blue-400 transition-colors">Terms of Service</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-lg font-semibold text-white mb-4">Connect</h4>
+                <div class="flex space-x-4">
+                    
+                    <a href="https://www.facebook.com/profile.php?id=61580355688292" target="_blank" class="text-gray-400 hover:text-blue-600 transition-colors" aria-label="Whyio on Facebook">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+                    </a>
+                    
+                    <a href="https://instagram.com/whyio000" target="_blank" class="text-gray-400 hover:text-pink-500 transition-colors" aria-label="Whyio on Instagram">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+                    </a>
+                    
+                    
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-700 pt-6 text-center">
+            <p class="text-xs text-gray-500">
+                &copy; 2025 Whyio. All rights reserved. 
+            </p>
+            <p class="mt-1 text-xs text-gray-600">
+                Developed by Mohiul Alam
+            </p>
+        </div>
+
+    </div>
+</footer>
     <script type="module">
         // --- FIREBASE CONFIGURATION ---
         const FIREBASE_CONFIG = {
@@ -105,16 +210,19 @@
 
         const firebaseConfig = FIREBASE_CONFIG;
         
-        // --- FIX APPLIED HERE: CATEGORY FILTER MUST MATCH ADMIN PANEL'S SAVED VALUE ---
+        // **********************************************
+        // ********* CRUCIAL FIX: CATEGORY FILTER *******
+        // **********************************************
         const CATEGORY_FILTER = 'classic_tees'; 
 
         // --- Firebase Imports ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, onSnapshot, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, query, onSnapshot, where, serverTimestamp, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         let db;
-        
+        let selectedProduct = null; 
+
         // --- DOM Elements ---
         const productGrid = document.getElementById('productGrid');
         const loadingSpinner = document.getElementById('loadingSpinner');
@@ -145,14 +253,13 @@
             }, 3000);
         }
         
-        // --- Product Rendering (Adjusted for Dark Theme) ---
+        // --- Product Rendering (BDT and Stock Check) ---
 
         function createProductCard(product) {
             const card = document.createElement('div');
             card.className = 'product-card container-bg rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-700 overflow-hidden flex flex-col'; 
             
-            // Assuming stock property is added to products from admin panel (defaulting to 1 if not present)
-            const stock = product.stock || 1; 
+            const stock = product.stock !== undefined ? product.stock : 0; 
 
             card.innerHTML = `
                 <div class="relative w-full h-64 sm:h-48 bg-gray-900 overflow-hidden">
@@ -166,7 +273,7 @@
                     <h4 class="text-xl font-semibold text-gray-50 mt-1 mb-2 truncate" title="${product.name}">${product.name}</h4>
                     <p class="text-gray-400 text-sm mb-3 line-clamp-2 flex-grow">${product.description || 'No description available.'}</p>
                     <div class="flex justify-between items-center mt-2">
-                        <span class="text-2xl font-bold text-green-400">$${product.price ? product.price.toFixed(2) : '0.00'}</span>
+                        <span class="text-2xl font-bold text-green-400">BDT ${product.price ? product.price.toFixed(2) : '0.00'}</span>
                         <span class="text-xs ${stock > 0 ? 'text-green-400' : 'text-red-400'} font-medium">
                             ${stock > 0 ? `In Stock (${stock})` : 'Out of Stock'}
                         </span>
@@ -175,7 +282,7 @@
                             class="add-to-cart-btn btn-primary w-full text-white font-semibold py-2 rounded-lg mt-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                             ${stock === 0 ? 'disabled' : ''}>
                         <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-                        <span>Add to Cart</span>
+                        <span>Place Order</span>
                     </button>
                 </div>
             `;
@@ -199,14 +306,72 @@
                 productGrid.appendChild(createProductCard(product));
             });
 
-            // Re-initialize event listeners for new buttons
             document.querySelectorAll('.add-to-cart-btn').forEach(button => {
                 button.addEventListener('click', handleAddToCart);
             });
         }
         
-        // --- Core Application Logic ---
+        // --- Core Application Logic (Modal Handlers) ---
 
+        function openCheckoutModal(product) {
+            selectedProduct = product;
+            document.getElementById('modalProductName').textContent = product.name;
+            document.getElementById('modalProductPrice').textContent = `BDT ${product.price ? product.price.toFixed(2) : '0.00'}`;
+            
+            document.getElementById('checkoutModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkoutModal').classList.add('hidden');
+            document.getElementById('orderForm').reset();
+            selectedProduct = null;
+        }
+
+        async function placeOrder(e) {
+            e.preventDefault();
+
+            if (!selectedProduct) {
+                showMessage('Error: No product selected for order.', 'error');
+                return;
+            }
+
+            if ((selectedProduct.stock || 0) < 1) {
+                 showMessage(`Cannot order ${selectedProduct.name}: Out of stock.`, 'error');
+                 closeCheckoutModal();
+                 return;
+            }
+
+            const orderData = {
+                // Customer Info
+                customerName: document.getElementById('customerName').value,
+                customerAddress: document.getElementById('customerAddress').value,
+                customerPhone: document.getElementById('customerPhone').value,
+                customerEmail: document.getElementById('customerEmail').value || 'N/A',
+                
+                // Product Info
+                productId: selectedProduct.id,
+                productName: selectedProduct.name,
+                productPrice: selectedProduct.price,
+                productCategory: selectedProduct.category,
+                
+                // Order Status & Timing
+                totalAmount: selectedProduct.price,
+                status: 'New', 
+                orderTime: serverTimestamp()
+            };
+            
+            try {
+                await addDoc(collection(db, 'orders'), orderData);
+                showMessage('Order Placed Successfully! We will contact you soon.', 'success');
+                closeCheckoutModal();
+
+            } catch (error) {
+                console.error("Error placing order: ", error);
+                showMessage('Failed to place order. Check console and Firestore rules.', 'error');
+            }
+        }
+        
         function startProductListener() {
             if (!db) {
                 showMessage("Database not initialized.", 'error');
@@ -214,18 +379,18 @@
             }
 
             const collectionPath = `products`; 
-            
-            // Query filters products by the specific category
             const productsQuery = query(
                 collection(db, collectionPath),
-                where('category', '==', CATEGORY_FILTER)
+                where('category', '==', CATEGORY_FILTER) // Uses the correct 'classic_tees' filter
             );
             
-            // Listen for real-time changes
             onSnapshot(productsQuery, (snapshot) => {
                 const products = [];
+                window.productsMap = {}; 
                 snapshot.forEach((doc) => {
-                    products.push({ id: doc.id, ...doc.data(), stock: doc.data().stock || 1 });
+                    const productData = { id: doc.id, ...doc.data(), stock: doc.data().stock !== undefined ? doc.data().stock : 0 };
+                    products.push(productData);
+                    window.productsMap[doc.id] = productData; 
                 });
                 renderProducts(products);
             }, (error) => {
@@ -234,10 +399,15 @@
                 showMessage("Failed to load products. Check console for database errors.", 'error');
             });
         }
-
+        
         function handleAddToCart(e) {
             const productId = e.currentTarget.getAttribute('data-id');
-            showMessage(`Added product ${productId.substring(0, 8)}... to cart! (Future Feature)`, 'info');
+            
+            if (window.productsMap && window.productsMap[productId]) {
+                openCheckoutModal(window.productsMap[productId]);
+            } else {
+                showMessage("Error: Product data not found for checkout.", 'error');
+            }
         }
 
         // --- Initialization ---
@@ -252,6 +422,10 @@
                 
                 startProductListener();
                 
+                // Modal Listeners
+                document.getElementById('orderForm').addEventListener('submit', placeOrder);
+                document.getElementById('closeModalBtn').addEventListener('click', closeCheckoutModal);
+
                 document.getElementById('authButton').addEventListener('click', () => {
                     showMessage("Authentication is not yet implemented.", 'info');
                 });
