@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whyio - Classic T-Shirts Collection</title> 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d; /* Dark Background */
+            color: #e5e5e5;
+        }
+        .container-bg {
+            background-color: #1a1a1a;
+            border-color: #262626;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
+        }
+        .nav-link.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <nav class="container-bg shadow-md sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-3xl font-extrabold text-blue-500 tracking-wider">Whyio</h1>
+                </div>
+                <div class="flex space-x-4 items-center">
+                    <a href="index.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Home</a>
+                    <a href="classic_tees.html" class="nav-link active px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Classic Tees</a>
+                    <a href="drop-shoulder-tees.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Drop-Shoulder Tees</a>
+                    <a href="polo_shirts.html" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors">Polo Shirts</a>
+                    <a href="#" class="nav-link px-3 py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-colors relative">
+                        Cart (<span id="cartCount">0</span>)
+                    </a>
+                </div>
+                <div class="flex items-center">
+                    <button id="authButton" class="bg-gray-700 text-gray-300 hover:bg-gray-600 px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center space-x-1">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        <span>Login / Register</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+
+        <header class="text-center py-8 mb-8 container-bg rounded-xl border border-gray-700">
+            <h2 class="text-4xl font-extrabold text-white mb-2">Classic T-Shirts Collection</h2>
+            <p class="text-lg text-gray-400">Timeless fits and premium cotton for everyday wear.</p>
+        </header>
+        
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            </div>
+
+        <div id="loadingSpinner" class="flex justify-center items-center py-16">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+        </div>
+
+    </main>
+
+    <div id="messageBox" class="fixed bottom-4 right-4 p-4 rounded-lg shadow-xl text-white hidden transition-all duration-300 transform translate-y-10 opacity-0" role="alert">
+        <p id="messageText" class="font-medium"></p>
+    </div>
+
+    <footer class="bg-gray-800 py-6 mt-12 w-full">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400 text-sm">
+            &copy; 2024 Whyio. All rights reserved. | 
+            <a href="#" class="hover:text-blue-400 transition-colors">Privacy Policy</a> | 
+            <a href="#" class="hover:text-blue-400 transition-colors">Terms of Service</a>
+        </div>
+    </footer>
+
+    <script type="module">
+        // --- FIREBASE CONFIGURATION ---
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDUPc96npoIO55MiX-vnpuLMISYzosc9sA",
+            authDomain: "whyio000.firebaseapp.com",
+            projectId: "whyio000", 
+            storageBucket: "whyio000.firebasestorage.app",
+            messagingSenderId: "675601432291",
+            appId: "1:675601432291:web:3bf62d7583865fbaca8fd6",
+            measurementId: "G-B07F6ZB1CY"
+        };
+
+        const firebaseConfig = FIREBASE_CONFIG;
+        
+        // --- FIX APPLIED HERE: CATEGORY FILTER MUST MATCH ADMIN PANEL'S SAVED VALUE ---
+        const CATEGORY_FILTER = 'classic_tees'; 
+
+        // --- Firebase Imports ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        let db;
+        
+        // --- DOM Elements ---
+        const productGrid = document.getElementById('productGrid');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        
+        // --- Utility Functions ---
+
+        function showMessage(message, type = 'info') {
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-500', 'bg-green-500', 'bg-blue-500', 'translate-y-10', 'opacity-0');
+            messageBox.classList.add('translate-y-0', 'opacity-100');
+
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-500');
+            } else if (type === 'success') {
+                messageBox.classList.add('bg-green-500');
+            } else {
+                messageBox.classList.add('bg-blue-500');
+            }
+
+            setTimeout(() => {
+                messageBox.classList.remove('translate-y-0', 'opacity-100');
+                messageBox.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 300);
+            }, 3000);
+        }
+        
+        // --- Product Rendering (Adjusted for Dark Theme) ---
+
+        function createProductCard(product) {
+            const card = document.createElement('div');
+            card.className = 'product-card container-bg rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-700 overflow-hidden flex flex-col'; 
+            
+            // Assuming stock property is added to products from admin panel (defaulting to 1 if not present)
+            const stock = product.stock || 1; 
+
+            card.innerHTML = `
+                <div class="relative w-full h-64 sm:h-48 bg-gray-900 overflow-hidden">
+                    <img src="${product.imageUrl || 'https://placehold.co/640x480/444/aaa?text=No+Image'}" 
+                         alt="${product.name}" 
+                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                         onerror="this.onerror=null;this.src='https://placehold.co/640x480/444/aaa?text=Image+Error';">
+                </div>
+                <div class="p-4 flex flex-col flex-grow">
+                    <span class="text-xs font-medium uppercase text-blue-400">${product.category.replace(/_/g, ' ')}</span>
+                    <h4 class="text-xl font-semibold text-gray-50 mt-1 mb-2 truncate" title="${product.name}">${product.name}</h4>
+                    <p class="text-gray-400 text-sm mb-3 line-clamp-2 flex-grow">${product.description || 'No description available.'}</p>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-2xl font-bold text-green-400">$${product.price ? product.price.toFixed(2) : '0.00'}</span>
+                        <span class="text-xs ${stock > 0 ? 'text-green-400' : 'text-red-400'} font-medium">
+                            ${stock > 0 ? `In Stock (${stock})` : 'Out of Stock'}
+                        </span>
+                    </div>
+                    <button data-id="${product.id}" 
+                            class="add-to-cart-btn btn-primary w-full text-white font-semibold py-2 rounded-lg mt-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            ${stock === 0 ? 'disabled' : ''}>
+                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                        <span>Add to Cart</span>
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
+            return card;
+        }
+
+        function renderProducts(products) {
+            productGrid.innerHTML = '';
+            loadingSpinner.classList.add('hidden');
+
+            if (products.length === 0) {
+                const message = document.createElement('p');
+                message.className = 'col-span-full text-center text-gray-500 py-10';
+                message.textContent = `No products found in the '${CATEGORY_FILTER.toUpperCase()}' collection.`;
+                productGrid.appendChild(message);
+                return;
+            }
+
+            products.forEach(product => {
+                productGrid.appendChild(createProductCard(product));
+            });
+
+            // Re-initialize event listeners for new buttons
+            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+                button.addEventListener('click', handleAddToCart);
+            });
+        }
+        
+        // --- Core Application Logic ---
+
+        function startProductListener() {
+            if (!db) {
+                showMessage("Database not initialized.", 'error');
+                return;
+            }
+
+            const collectionPath = `products`; 
+            
+            // Query filters products by the specific category
+            const productsQuery = query(
+                collection(db, collectionPath),
+                where('category', '==', CATEGORY_FILTER)
+            );
+            
+            // Listen for real-time changes
+            onSnapshot(productsQuery, (snapshot) => {
+                const products = [];
+                snapshot.forEach((doc) => {
+                    products.push({ id: doc.id, ...doc.data(), stock: doc.data().stock || 1 });
+                });
+                renderProducts(products);
+            }, (error) => {
+                console.error(`Error listening to ${CATEGORY_FILTER} product list:`, error);
+                loadingSpinner.classList.add('hidden');
+                showMessage("Failed to load products. Check console for database errors.", 'error');
+            });
+        }
+
+        function handleAddToCart(e) {
+            const productId = e.currentTarget.getAttribute('data-id');
+            showMessage(`Added product ${productId.substring(0, 8)}... to cart! (Future Feature)`, 'info');
+        }
+
+        // --- Initialization ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                getAuth(app); 
+                
+                startProductListener();
+                
+                document.getElementById('authButton').addEventListener('click', () => {
+                    showMessage("Authentication is not yet implemented.", 'info');
+                });
+                
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                loadingSpinner.classList.add('hidden');
+                showMessage("FATAL: Store failed to connect to Firebase. Check console.", 'error');
+            }
+        });
+    </script>
+</body>
+</html>

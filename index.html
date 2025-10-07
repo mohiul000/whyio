@@ -1,525 +1,599 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Whyio - Design Your Story</title>
-	<script src="https://cdn.tailwindcss.com"></script>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-	<!-- Firebase Libraries (MUST BE TYPE="MODULE") -->
-	<script type="module">
-		// TEMPORARILY DISABLED: Firebase is not initialized, as we are focusing on Image Generation.
-		// We still define the window.firebase object to prevent crashes, but its services are null.
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whyio - Design Your Story</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase Libraries (MUST BE TYPE="MODULE") -->
+    <script type="module">
+        // TEMPORARILY DISABLED: Firebase is not initialized, as we are focusing on Image Generation.
+        // We still define the window.firebase object to prevent crashes, but its services are null.
 
-		const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-		const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-		// Expose a mock object globally to prevent the application from crashing
-		window.firebase = {
-			auth: { currentUser: { uid: 'NO_AUTH_USER' } }, // Mock current user for UI logic
-			db: null,
-			app: null,
-			appId,
-			initialAuthToken,
-			isInitialized: false,
-			initStatus: "Firebase AUTH/DB services disabled for testing."
-		};
-	</script>
-	<style>
-		body {
-			font-family: 'Inter', sans-serif;
-			background-color: #0d0d0d;
-		}
-		.container-bg {
-			background-color: #1a1a1a;
-			border-color: #262626;
-			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-		}
-		.btn-primary {
-			background-color: #3b82f6;
-			transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
-		}
-		.btn-primary:hover {
-			background-color: #2563eb;
-			transform: translateY(-2px);
-			box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
-		}
-		.tab-button {
-			transition: color 0.3s, background-color 0.3s;
-		}
-		/* Custom file input styling */
-		input[type="file"]::file-selector-button {
-			background-color: #3b82f6;
-			color: white;
-			padding: 0.5rem 1rem;
-			border: none;
-			border-radius: 9999px; /* rounded-full */
-			margin-right: 1rem;
-			font-weight: 600;
-			cursor: pointer;
-			transition: background-color 0.3s;
-		}
-		input[type="file"]::file-selector-button:hover {
-			background-color: #2563eb;
-		}
-	</style>
+        // Expose a mock object globally to prevent the application from crashing
+        window.firebase = {
+            auth: { currentUser: { uid: 'NO_AUTH_USER' } }, // Mock current user for UI logic
+            db: null,
+            app: null,
+            appId,
+            initialAuthToken,
+            isInitialized: false,
+            initStatus: "Firebase AUTH/DB services disabled for testing."
+        };
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d;
+        }
+        .container-bg {
+            background-color: #1a1a1a;
+            border-color: #262626;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.4);
+        }
+        .tab-button {
+            transition: color 0.3s, background-color 0.3s;
+        }
+        /* Custom file input styling */
+        input[type="file"]::file-selector-button {
+            background-color: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 9999px; /* rounded-full */
+            margin-right: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: #2563eb;
+        }
+
+        /* --- New Carousel Styling --- */
+        .carousel-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            /* Slow fade effect */
+            transition: opacity 2s ease-in-out; 
+        }
+
+        .carousel-image.active {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body class="bg-gray-900 antialiased flex flex-col min-h-screen text-gray-200">
 
-	<!-- Main Content Container -->
-	<div class="flex-grow p-4 md:p-8 flex flex-col items-center">
+    <!-- Main Content Container -->
+    <div class="flex-grow p-4 md:p-8 flex flex-col items-center">
 
-		<!-- Header Section -->
-		<header class="bg-gray-800 shadow-xl py-4 px-6 md:px-8 w-full fixed top-0 left-0 z-50">
-			<nav class="flex justify-between items-center max-w-7xl mx-auto">
-				<!-- LOGO SECTION START -->
-				<a href="#" class="flex items-center space-x-3">
-					<img id="mainLogo" 
-							src="./img/whyioLOGO.jpg" 
-							alt="Whyio Brand Logo" 
-							class="h-10 w-auto rounded-md object-contain"
-							onerror="this.onerror=null; this.parentElement.innerHTML = '<span class=\'text-3xl font-bold text-gray-50 tracking-wide\'>WHYIO</span>'">
-					<span class="text-2xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors hidden sm:inline">WHYIO</span>
-				</a>
-				<!-- LOGO SECTION END -->
-				<div class="hidden md:flex space-x-8">
-					<!-- Tab buttons to switch between sections -->
-					<button class="nav-link tab-button text-blue-400 font-medium hover:text-blue-400 transition-colors" data-tab="home">Home</button>
-					<button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="customDesigns">Custom Designs</button>
-					<button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="account">Account</button>
-				</div>
-				<div>
-					<button id="authButton" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg shadow-blue-500/50 hover:bg-blue-700 transition-colors">Login / Signup</button>
-				</div>
-			</nav>
-		</header>
+        <!-- Header Section -->
+        <header class="bg-gray-800 shadow-xl py-4 px-6 md:px-8 w-full fixed top-0 left-0 z-50">
+            <nav class="flex justify-between items-center max-w-7xl mx-auto">
+                
+                <!-- LEFT GROUP: Logo + Tagline -->
+                <div class="flex items-center space-x-6">
+                    <!-- LOGO SECTION START -->
+                    <a href="#" class="flex items-center space-x-3">
+                        <img id="mainLogo" 
+                                src="./img/whyioLOGO.jpg" 
+                                alt="Whyio Brand Logo" 
+                                class="h-14 w-auto rounded-md object-contain"
+                                onerror="this.onerror=null; this.parentElement.innerHTML = '<span class=\'text-3xl font-bold text-gray-50 tracking-wide\'>WHYIO</span>'">
+                        <span class="text-2xl font-bold text-gray-50 tracking-wide hover:text-blue-400 transition-colors hidden sm:inline">WHYIO</span>
+                    </a>
+                    <!-- LOGO SECTION END -->
+                    
+                    <!-- REINFORCEMENT TAGLINE (Placement 3: Header reinforcement) -->
+                    <p class="hidden lg:block text-sm text-gray-400 font-medium italic">
+                        Your one-stop shop for self-expression.
+                    </p>
+                </div>
+                <!-- END LEFT GROUP -->
 
-		<!-- Dynamic Content Sections -->
-		<div class="w-full max-w-7xl mx-auto mt-24">
-			
-			<!-- --- Home Section --- -->
-			<div id="home-section" class="tab-content" style="display: block;">
-				<!-- Hero Section with Moto -->
-				<div class="hero-section text-center py-20 bg-gray-800 rounded-xl mb-12 shadow-lg container-bg">
-					<h1 class="text-5xl md:text-6xl font-extrabold text-gray-100 leading-tight">
-						Find Your Why. <br>And Write Your Own Story.
-					</h1>
-					<p class="text-xl md:text-2xl text-gray-400 mt-4 max-w-3xl mx-auto">
-						Your one-stop shop for self-expression through custom apparel.
-					</p>
-				</div>
+                <!-- RIGHT GROUP: Nav Links + Auth Button -->
+                <div class="flex items-center space-x-4">
+                    <div class="hidden md:flex space-x-8">
+                        <!-- Tab buttons to switch between sections -->
+                        <button class="nav-link tab-button text-blue-400 font-medium hover:text-blue-400 transition-colors" data-tab="home">Home</button>
+                        <button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="customDesigns">Custom Designs</button>
+                        <button class="nav-link tab-button text-gray-400 font-medium hover:text-blue-400 transition-colors" data-tab="account">Account</button>
+                        
+                    </div>
 
-				<!-- T-Shirt Categories Section -->
-				<div class="mb-12">
-					<h2 class="text-3xl font-bold text-gray-100 mb-6 text-center">Our T-Shirt Collection</h2>
-					<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-						
-						<!-- Drop Shoulder Tee Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
-						<div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
-							<!-- Image Container with fixed height for uniform look -->
-							<div class="h-64 overflow-hidden rounded-lg mb-4">
-								<img src="https://me-em.pk/cdn/shop/files/NAVYBLUE_1da49ef0-f599-4e03-a212-616392d07165.webp?v=1749715776" alt="Drop Shoulder T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
-							</div>
-							<h3 class="text-lg font-semibold text-gray-100">Drop Shoulder Tees</h3>
-							<p class="text-gray-400 mb-4 flex-grow">Relaxed fit for ultimate comfort.</p>
-							<!-- Call to Action Button -->
-							<button data-tab="customDesigns" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm">Customize Now</button>
-						</div>
-						
-						<!-- Polo T-Shirt Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
-						<div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
-							<!-- Image Container with fixed height for uniform look -->
-							<div class="h-64 overflow-hidden rounded-lg mb-4">
-								<img src="https://image.made-in-china.com/2f0j00tbSlcfiqOWYp/Summer-High-Quality-Polo-Shirt-Casual-Short-Sleeve-Personal-Company-Group-Logo-Custom-Men-and-Women-Top-Polo-T-Shirt.webp" alt="Polo T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
-							</div>
-							<h3 class="text-lg font-semibold text-gray-100">Polo T-Shirts</h3>
-							<p class="text-gray-400 mb-4 flex-grow">Classic style with a modern touch.</p>
-							<!-- Call to Action Button -->
-							<button data-tab="customDesigns" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm">Customize Now</button>
-						</div>
-						
-						<!-- Classic T-Shirt Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
-						<div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
-							<!-- Image Container with fixed height for uniform look -->
-							<div class="h-64 overflow-hidden rounded-lg mb-4">
-								<img src="https://theadultman.com/wp-content/uploads/2022/01/True-Classic-Tees-model-wearing-black-shirt.jpg" alt="Classic T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
-							</div>
-							<h3 class="text-lg font-semibold text-gray-100">Classic T-Shirts</h3>
-							<p class="text-gray-400 mb-4 flex-grow">The timeless, everyday essential.</p>
-							<!-- Call to Action Button -->
-							<button data-tab="customDesigns" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm">Customize Now</button>
-						</div>
-					</div>
-				</div>
-				
-				<!-- Start Designing Section -->
-				<div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center mb-12 container-bg">
-					<h2 class="text-3xl font-bold text-gray-100 mb-4">Start Designing</h2>
-					<p class="text-gray-400 mb-6 max-w-3xl mx-auto">Unleash your creativity and design a t-shirt that's uniquely you. Our AI-powered tool can bring any idea to life.</p>
-					<button data-tab="customDesigns" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
-						Create My Own Design
-					</button>
-				</div>
+                    <div>
+                        <button id="authButton" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-full shadow-lg shadow-blue-500/50 hover:bg-blue-700 transition-colors">Login / Signup</button>
+                    </div>
+                </div>
+                <!-- END RIGHT GROUP -->
+            </nav>
+        </header>
 
-				<!-- Design and Earn Section -->
-				<div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center container-bg">
-					<h2 class="text-3xl font-bold text-gray-100 mb-4">Design and Earn</h2>
-					<p class="text-gray-400 mb-6 max-w-3xl mx-auto">Are you an artist or a design enthusiast? Join our community and earn from your creations. Upload your designs, and we'll handle the rest—from production to shipping. Every sale earns you a commission.</p>
-					<button data-tab="account" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
-						Join the Whyio Community
-					</button>
-				</div>
-			</div>
+        <!-- Dynamic Content Sections -->
+        <div class="w-full max-w-7xl mx-auto mt-24">
+            
+            <!-- --- Home Section --- -->
+            <div id="home-section" class="tab-content" style="display: block;">
+                
+                <!-- Hero Section with Carousel - UPDATED HEIGHT to h-[500px] -->
+                <div class="hero-section bg-gray-800 rounded-xl mb-6 shadow-lg container-bg relative overflow-hidden">
+                    
+                    <!-- 1. Carousel Image Container (set to h-[500px] for a large banner height) -->
+                    <div id="carouselContainer" class="relative w-full h-[500px] overflow-hidden rounded-xl">
+                        <!-- Placeholder images for the carousel - UPDATED DIMENSIONS 960x500 -->
+                        <img id="img1" class="carousel-image active" src="https://api.outrank.so/storage/v1/object/public/article-images/7661ec86-1aab-40f2-8ee7-d2daef2e4eec/screenshots/9a93a9ab-abfc-4d78-b003-ea89453feef8.jpg" alt="T-Shirt Design 1">
+                        <img id="img2" class="carousel-image" src="https://ecomposer.io/cdn/shop/articles/Aug_2024_ai_tshirt_design_generator.png?v=1755678957&width=1100" alt="T-Shirt Design 2">
+                        <img id="img3" class="carousel-image" src="https://thedesignest.net/wp-content/uploads/2019/12/T-Shirt-Mockup.jpg" alt="T-Shirt Design 3">
+                        <img id="img4" class="carousel-image" src="https://assets.designhill.com/design-blog/wp-content/uploads/2023/03/Saving-Our-Planet-Together-Celebrating-Earth-Day-with-Eco-Friendly-Custom-Designs-1.jpg" alt="T-Shirt Design 4">
+                    </div>
+                </div>
+                
+                <!-- NEW SECTION: Motto and Value Proposition (Moved from the carousel overlay) -->
+                <div class="text-center mb-12 px-4">
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-50 leading-tight">
+                        Find Your Why. And Write Your Own Story.
+                    </h1>
+                    <p class="text-lg md:text-xl text-gray-400 mt-2 max-w-3xl mx-auto">
+                        Your one-stop shop for self-expression through custom apparel.
+                    </p>
+                    <button data-tab="customDesigns" class="mt-6 btn-primary text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-blue-500/50 inline-block transform hover:scale-[1.02]">
+                        Start Designing Now
+                    </button>
+                </div>
+                
+                <!-- T-Shirt Categories Section -->
+                <div class="mb-12">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6 text-center">Our T-Shirt Collection</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        
+                        <!-- Drop Shoulder Tee Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
+                            <!-- Image Container with fixed height for uniform look -->
+                            <div class="h-64 overflow-hidden rounded-lg mb-4">
+                                <img src="https://me-em.pk/cdn/shop/files/NAVYBLUE_1da49ef0-f599-4e03-a212-616392d07165.webp?v=1749715776" alt="Drop Shoulder T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-100">Drop Shoulder Tees</h3>
+                            <p class="text-gray-400 mb-4 flex-grow">Relaxed fit for ultimate comfort.</p>
+                            <!-- Call to Action Button -->
+                            <a href="drop-shoulder-tees.html" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm text-center inline-block">See All</a></div>
+                        
+                        <!-- Polo T-Shirt Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
+                            <!-- Image Container with fixed height for uniform look -->
+                            <div class="h-64 overflow-hidden rounded-lg mb-4">
+                                <img src="https://image.made-in-china.com/2f0j00tbSlcfiqOWYp/Summer-High-Quality-Polo-Shirt-Casual-Short-Sleeve-Personal-Company-Group-Logo-Custom-Men-and-Women-Top-Polo-T-Shirt.webp" alt="Polo T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-100">Polo T-Shirts</h3>
+                            <p class="text-gray-400 mb-4 flex-grow">Classic style with a modern touch.</p>
+                            <!-- Call to Action Button -->
+                            <a href="polo_shirts.html" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm text-center inline-block">See All</a></div>
+                        
+                        
+                        <!-- Classic T-Shirt Card - MODIFIED FOR UNIFORM IMAGE SIZE AND CTA -->
+                        <div class="product-card p-4 rounded-xl shadow-lg border border-gray-700 container-bg flex flex-col">
+                            <!-- Image Container with fixed height for uniform look -->
+                            <div class="h-64 overflow-hidden rounded-lg mb-4">
+                                <img src="https://theadultman.com/wp-content/uploads/2022/01/True-Classic-Tees-model-wearing-black-shirt.jpg" alt="Classic T-Shirt" class="w-full h-full object-cover transition-transform duration-300 hover:scale-105">
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-100">Classic T-Shirts</h3>
+                            <p class="text-gray-400 mb-4 flex-grow">The timeless, everyday essential.</p>
+                            <!-- Call to Action Button -->
+                            <a href="classic_tees.html" class="btn-primary w-full text-white font-bold py-2 px-4 rounded-lg text-sm text-center inline-block">See All</a></div>
+                        
+                    </div>
+                </div>
+                
+                <!-- Start Designing Section -->
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center mb-12 container-bg">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-4">Start Designing</h2>
+                    <p class="text-gray-400 mb-6 max-w-3xl mx-auto">Unleash your creativity and design a t-shirt that's uniquely you. Our AI-powered tool can bring any idea to life.</p>
+                    <button data-tab="customDesigns" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
+                        Create My Own Design
+                    </button>
+                </div>
 
-			<!-- --- Custom Designs Section (Initially Hidden) --- -->
-			<div id="customDesigns-section" class="tab-content" style="display: none;">
-				<div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center">
-					<h2 class="text-3xl font-bold text-gray-100 mb-6">Create Your Own Design</h2>
-					<p class="text-gray-400 mb-6 text-center">Describe the design or modification you want for your t-shirt, optionally providing a reference image.</p>
+                <!-- Design and Earn Section -->
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg text-center container-bg">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-4">Design and Earn</h2>
+                    <p class="text-gray-400 mb-6 max-w-3xl mx-auto">Are you an artist or a design enthusiast? Join our community and earn from your creations. Upload your designs, and we'll handle the rest—from production to shipping. Every sale earns you a commission.</p>
+                    <button data-tab="account" class="btn-primary text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-blue-500/50 inline-block">
+                        Join the Whyio Community
+                    </button>
+                </div>
+            </div>
 
-					<div class="w-full max-w-md space-y-4">
-						<!-- Image Upload Field -->
-						<div>
-							<label for="imageUpload" class="block text-gray-300 font-medium mb-2">Upload Reference Image (Optional)</label>
-							<input type="file" id="imageUpload" accept="image/png, image/jpeg" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400">
-						</div>
-						
-						<!-- Image Preview -->
-						<div id="imagePreviewContainer" class="hidden mt-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
-							<img id="imagePreview" class="max-h-48 w-auto mx-auto rounded-md shadow-inner object-contain" alt="Image Preview">
-						</div>
+            <!-- --- Custom Designs Section (Initially Hidden) --- -->
+            <div id="customDesigns-section" class="tab-content" style="display: none;">
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6">Create Your Own Design</h2>
+                    <p class="text-gray-400 mb-6 text-center">Describe the design or modification you want for your t-shirt, optionally providing a reference image.</p>
 
-						<!-- Existing Text Prompt Field -->
-						<div>
-							<label for="designPrompt" class="block text-gray-300 font-medium mb-2">Text Instruction</label>
-							<input type="text" id="designPrompt" placeholder="E.g., Transform this into a retro 8-bit style, or a futuristic cyberpunk cat" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500">
-						</div>
-					</div>
+                    <div class="w-full max-w-md space-y-4">
+                        <!-- Image Upload Field -->
+                        <div>
+                            <label for="imageUpload" class="block text-gray-300 font-medium mb-2">Upload Reference Image (Optional)</label>
+                            <input type="file" id="imageUpload" accept="image/png, image/jpeg" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400">
+                        </div>
+                        
+                        <!-- Image Preview -->
+                        <div id="imagePreviewContainer" class="hidden mt-2 p-2 bg-gray-700 rounded-lg border border-gray-600">
+                            <!-- max-h-96 for better visibility -->
+                            <img id="imagePreview" class="max-h-96 w-auto mx-auto rounded-md shadow-inner object-contain" alt="Image Preview">
+                        </div>
 
-					<button id="generateBtn" class="mt-6 btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50">Generate Design</button>
+                        <!-- Existing Text Prompt Field -->
+                        <div>
+                            <label for="designPrompt" class="block text-gray-300 font-medium mb-2">Text Instruction</label>
+                            <input type="text" id="designPrompt" placeholder="E.g., Transform this into a retro 8-bit style, or a futuristic cyberpunk cat" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
 
-					<div id="loading" class="mt-6 text-blue-400 hidden flex items-center space-x-3">
-						<svg class="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-						</svg>
-						<span>Generating your design...</span>
-					</div>
+                    <button id="generateBtn" class="mt-6 btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg shadow-blue-500/50">Generate Design</button>
 
-					<div id="designOutput" class="mt-8 hidden w-full max-w-md">
-						<h3 class="text-xl font-semibold text-gray-100 mb-4">Your Generated Design</h3>
-						<img id="generatedImage" src="" alt="Generated T-Shirt Design" class="w-full h-auto rounded-lg shadow-lg">
-						<button id="addToCartBtn" class="mt-4 w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Add to Cart (Disabled)</button>
-					</div>
+                    <div id="loading" class="mt-6 text-blue-400 hidden flex items-center space-x-3">
+                        <svg class="animate-spin h-8 w-8 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Generating your design...</span>
+                    </div>
 
-					<div id="messageBox" class="mt-6 p-4 rounded-lg hidden w-full max-w-md text-center"></div>
-				</div>
-			</div>
+                    <div id="designOutput" class="mt-8 hidden w-full max-w-md">
+                        <h3 class="text-xl font-semibold text-gray-100 mb-4">Your Generated Design</h3>
+                        <img id="generatedImage" src="" alt="Generated T-Shirt Design" class="w-full h-auto rounded-lg shadow-lg">
+                        <button id="addToCartBtn" class="mt-4 w-full btn-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg">Add to Cart (Disabled)</button>
+                    </div>
 
-			<!-- --- Account Section (Initially Hidden) --- -->
-			<div id="account-section" class="tab-content" style="display: none;">
-				<div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center max-w-xl mx-auto">
-					<h2 class="text-3xl font-bold text-gray-100 mb-6">My Account</h2>
-					
-					<!-- CONNECTION DIAGNOSTICS -->
-					<div id="connectionDiagnostics" class="w-full text-left mb-6 p-4 bg-gray-900 rounded-lg border border-gray-700">
-						<h3 class="text-xl font-bold text-gray-100 mb-2">Connection Diagnostics</h3>
-						<p class="text-red-400 font-bold">⚠️ Firebase Authentication and Database are currently DISABLED to focus on image generation.</p>
-						<p class="text-sm text-gray-400 mt-1">Status: Logged in as mock user `NO_AUTH_USER`.</p>
-					</div>
-					<!-- END CONNECTION DIAGNOSTICS -->
+                    <div id="messageBox" class="mt-6 p-4 rounded-lg hidden w-full max-w-md text-center"></div>
+                </div>
+            </div>
 
-					<div id="authStatus" class="text-center text-gray-400 mb-4">
-						<p>Saving designs is currently disabled.</p>
-					</div>
-					<div id="userDetails" class="w-full space-y-4 text-gray-300">
-						<div class="p-4 bg-gray-700 rounded-lg">
-							<p><strong>User ID:</strong> NO_AUTH_USER</p>
-						</div>
-						<div class="p-4 bg-gray-700 rounded-lg">
-							<p><strong>Status:</strong> Saving Disabled</p>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-		</div>
-	</div>
+            <!-- --- Account Section (Initially Hidden) --- -->
+            <div id="account-section" class="tab-content" style="display: none;">
+                <div class="bg-gray-800 p-8 rounded-xl shadow-lg flex flex-col items-center max-w-xl mx-auto">
+                    <h2 class="text-3xl font-bold text-gray-100 mb-6">My Account</h2>
+                    
+                    <!-- CONNECTION DIAGNOSTICS -->
+                    <div id="connectionDiagnostics" class="w-full text-left mb-6 p-4 bg-gray-900 rounded-lg border border-gray-700">
+                        <h3 class="text-xl font-bold text-gray-100 mb-2">Connection Diagnostics</h3>
+                        <p class="text-red-400 font-bold">⚠️ Firebase Authentication and Database are currently DISABLED to focus on image generation.</p>
+                        <p class="text-sm text-gray-400 mt-1">Status: Logged in as mock user `NO_AUTH_USER`.</p>
+                    </div>
+                    <!-- END CONNECTION DIAGNOSTICS -->
 
-	<!-- Footer Section -->
-	<footer class="bg-gray-800 text-gray-400 py-8 px-6 mt-12 w-full rounded-t-lg">
-		<div class="max-w-7xl mx-auto text-center md:text-left">
-			<div class="border-t border-gray-700 mt-8 pt-4 text-center">
-				<p class="text-sm text-gray-500">&copy; 2024 Whyio. All rights reserved.</p>
-			</div>
-		</div>
-	</footer>
-	<script>
-		// API Key is automatically handled by the environment if left blank.
-		const apiKey = ""; 
+                    <div id="authStatus" class="text-center text-gray-400 mb-4">
+                        <p>Saving designs is currently disabled.</p>
+                    </div>
+                    <div id="userDetails" class="w-full space-y-4 text-gray-300">
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <p><strong>User ID:</strong> NO_AUTH_USER</p>
+                        </div>
+                        <div class="p-4 bg-gray-700 rounded-lg">
+                            <p><strong>Status:</strong> Saving Disabled</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
 
-		const tabs = {
-			home: document.getElementById('home-section'),
-			customDesigns: document.getElementById('customDesigns-section'),
-			account: document.getElementById('account-section')
-		};
-		const tabButtons = document.querySelectorAll('.tab-button, [data-tab]');
-		const authButton = document.getElementById('authButton');
-		const designPromptInput = document.getElementById('designPrompt');
-		const generateBtn = document.getElementById('generateBtn');
-		const loadingSpinner = document.getElementById('loading');
-		const designOutput = document.getElementById('designOutput');
-		const generatedImage = document.getElementById('generatedImage');
-		const messageBox = document.getElementById('messageBox');
-		
-		// Elements for Image Upload
-		const imageUpload = document.getElementById('imageUpload');
-		const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-		const imagePreview = document.getElementById('imagePreview');
-		let uploadedBase64Image = null; // Stores the base64 string of the uploaded image
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-gray-400 py-8 px-6 mt-12 w-full rounded-t-lg">
+        <div class="max-w-7xl mx-auto text-center md:text-left">
+            <div class="border-t border-gray-700 mt-8 pt-4 text-center">
+                <p class="text-sm text-gray-500">&copy; 2024 Whyio. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        // API Key is automatically handled by the environment if left blank.
+        const apiKey = ""; 
 
-		// Function to show/hide sections
-		function showTab(tabName) {
-			Object.values(tabs).forEach(tab => tab.style.display = 'none');
-			if (tabs[tabName]) {
-				tabs[tabName].style.display = 'block';
-			}
-			tabButtons.forEach(btn => {
-				// Only target navigation links (those in the header or primary CTA buttons) for active state styling
-				if (btn.classList.contains('nav-link')) { 
-					btn.classList.remove('text-blue-400');
-					btn.classList.add('text-gray-400');
-				}
-			});
-			const activeBtn = document.querySelector(`.nav-link[data-tab="${tabName}"]`);
-			if (activeBtn) {
-				activeBtn.classList.add('text-blue-400');
-				activeBtn.classList.remove('text-gray-400');
-			}
-		}
+        const tabs = {
+            home: document.getElementById('home-section'),
+            customDesigns: document.getElementById('customDesigns-section'),
+            account: document.getElementById('account-section')
+        };
+        const tabButtons = document.querySelectorAll('.tab-button, [data-tab]');
+        const authButton = document.getElementById('authButton');
+        const designPromptInput = document.getElementById('designPrompt');
+        const generateBtn = document.getElementById('generateBtn');
+        const loadingSpinner = document.getElementById('loading');
+        const designOutput = document.getElementById('designOutput');
+        const generatedImage = document.getElementById('generatedImage');
+        const messageBox = document.getElementById('messageBox');
+        
+        // Elements for Image Upload
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        let uploadedBase64Image = null; // Stores the base64 string of the uploaded image
 
-		// Function to show a message in the message box
-		function showMessage(message, type = 'info') {
-			messageBox.textContent = message;
-			// Clear all previous background/text color classes and unhide
-			messageBox.className = 'mt-6 p-4 rounded-lg w-full max-w-md text-center';
+        // Function to show/hide sections
+        function showTab(tabName) {
+            Object.values(tabs).forEach(tab => tab.style.display = 'none');
+            if (tabs[tabName]) {
+                tabs[tabName].style.display = 'block';
+            }
+            tabButtons.forEach(btn => {
+                // Only target navigation links (those in the header or primary CTA buttons) for active state styling
+                if (btn.classList.contains('nav-link')) { 
+                    btn.classList.remove('text-blue-400');
+                    btn.classList.add('text-gray-400');
+                }
+            });
+            const activeBtn = document.querySelector(`.nav-link[data-tab="${tabName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('text-blue-400');
+                activeBtn.classList.remove('text-gray-400');
+            }
+        }
 
-			if (type === 'error') {
-				messageBox.classList.add('bg-red-900', 'text-red-300');
-			} else if (type === 'info') {
-				messageBox.classList.add('bg-blue-900', 'text-blue-300');
-			} else {
-				 messageBox.classList.add('bg-gray-700', 'text-gray-300');
-			}
-			messageBox.classList.remove('hidden');
-		}
+        // Function to show a message in the message box
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            // Clear all previous background/text color classes and unhide
+            messageBox.className = 'mt-6 p-4 rounded-lg w-full max-w-md text-center';
 
-		// Helper function to read image file and convert to base64
-		function fileToBase64(file) {
-			return new Promise((resolve, reject) => {
-				const reader = new FileReader();
-				// Read the file as a data URL, which includes the mime type header
-				reader.readAsDataURL(file);
-				// Resolve only the base64 data part (after the comma)
-				reader.onload = () => resolve(reader.result.split(',')[1]); 
-				reader.onerror = error => reject(error);
-			});
-		}
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-900', 'text-red-300');
+            } else if (type === 'info') {
+                messageBox.classList.add('bg-blue-900', 'text-blue-300');
+            } else {
+                 messageBox.classList.add('bg-gray-700', 'text-gray-300');
+            }
+            messageBox.classList.remove('hidden');
+        }
 
-		// Handle image upload preview
-		imageUpload.addEventListener('change', (event) => {
-			const file = event.target.files[0];
-			if (file) {
-				if (!file.type.startsWith('image/')) {
-					showMessage("Invalid file type. Please upload an image (PNG or JPEG).", 'error');
-					imageUpload.value = '';
-					imagePreviewContainer.classList.add('hidden');
-					return;
-				}
-				
-				const reader = new FileReader();
-				reader.onload = (e) => {
-					imagePreview.src = e.target.result;
-					imagePreviewContainer.classList.remove('hidden');
-					// Convert file to base64 for API use
-					fileToBase64(file).then(base64Data => {
-						uploadedBase64Image = base64Data;
-					}).catch(error => {
-						showMessage("Error processing image file.", 'error');
-						console.error("File processing error:", error);
-						uploadedBase64Image = null;
-					});
-				};
-				reader.readAsDataURL(file);
-			} else {
-				imagePreviewContainer.classList.add('hidden');
-				imagePreview.src = '';
-				uploadedBase64Image = null;
-			}
-		});
-		
-		// =========================================================================
-		// CORE APPLICATION STARTUP FUNCTION
-		// Runs after all DOM elements are loaded
-		// =========================================================================
-		function startApplication(firebase) {
-			
-			// Set up UI for "No Auth" state
-			authButton.textContent = "Login / Signup";
-			authButton.dataset.tab = 'account';
+        // Helper function to read image file and convert to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                // Read the file as a data URL, which includes the mime type header
+                reader.readAsDataURL(file);
+                // Resolve only the base64 data part (after the comma)
+                reader.onload = () => resolve(reader.result.split(',')[1]); 
+                reader.onerror = error => reject(error);
+            });
+        }
 
-			// Add event listeners to switch tabs
-			tabButtons.forEach(button => {
-				button.addEventListener('click', (event) => {
-					const tabName = event.target.dataset.tab;
-					if (tabName) {
-						showTab(tabName);
-					}
-				});
-			});
+        // Handle image upload preview
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    showMessage("Invalid file type. Please upload an image (PNG or JPEG).", 'error');
+                    imageUpload.value = '';
+                    imagePreviewContainer.classList.add('hidden');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreviewContainer.classList.remove('hidden');
+                    // Convert file to base64 for API use
+                    fileToBase64(file).then(base64Data => {
+                        uploadedBase64Image = base64Data;
+                    }).catch(error => {
+                        showMessage("Error processing image file.", 'error');
+                        console.error("File processing error:", error);
+                        uploadedBase64Image = null;
+                    });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreviewContainer.classList.add('hidden');
+                imagePreview.src = '';
+                uploadedBase64Image = null;
+            }
+        });
+        
+        // =========================================================================
+        // CORE APPLICATION STARTUP FUNCTION
+        // Runs after all DOM elements are loaded
+        // =========================================================================
+        function startApplication(firebase) {
+            
+            // --- CAROUSEL LOGIC START ---
+            const carouselImages = document.querySelectorAll('.carousel-image');
+            let currentImageIndex = 0;
 
-			// Handle the generate button click for AI image generation (DIRECT API CALL)
-			generateBtn.addEventListener('click', async () => {
-				const prompt = designPromptInput.value.trim();
-				const isMultimodal = uploadedBase64Image !== null;
+            function updateCarousel() {
+                // Remove active class from the current image
+                if (carouselImages.length > 0) {
+                    carouselImages[currentImageIndex].classList.remove('active');
+                
+                    // Calculate the next image index
+                    currentImageIndex = (currentImageIndex + 1) % carouselImages.length;
+                    
+                    // Add active class to the next image
+                    carouselImages[currentImageIndex].classList.add('active');
+                }
+            }
 
-				if (!prompt && !isMultimodal) {
-					showMessage("Please enter a text description or upload an image to generate a design.", 'error');
-					return;
-				}
-				
-				loadingSpinner.classList.remove('hidden');
-				designOutput.classList.add('hidden');
-				messageBox.classList.add('hidden');
-				
-				let imageUrl = '';
-				let maxRetries = 3;
-				let delay = 1000;
-				let finalBase64Data = null;
+            // Start the carousel (transition every 5 seconds)
+            if (carouselImages.length > 1) {
+                setInterval(updateCarousel, 5000); 
+            }
+            // --- CAROUSEL LOGIC END ---
 
-				for (let i = 0; i < maxRetries; i++) {
-					try {
-						let response, result;
+            // Set up UI for "No Auth" state
+            authButton.textContent = "Login / Signup";
+            authButton.dataset.tab = 'account';
 
-						if (isMultimodal) {
-							// --- Multimodal (Image Editing/Transformation) using gemini-2.5-flash-image-preview ---
-							const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
-							
-							const contents = [];
-							// 1. Add image part
-							contents.push({
-								inlineData: {
-									mimeType: imageUpload.files[0].type,
-									data: uploadedBase64Image
-								}
-							});
-							// 2. Add text part (or default if prompt is empty)
-							contents.push({ text: prompt || "Redraw this image as a creative t-shirt graphic." });
+            // Add event listeners to switch tabs
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const tabName = event.target.dataset.tab;
+                    if (tabName) {
+                        showTab(tabName);
+                    }
+                });
+            });
 
-							const payload = {
-								contents: [{ parts: contents }],
-								generationConfig: {
-									responseModalities: ['TEXT', 'IMAGE']
-								}
-							};
+            // Handle the generate button click for AI image generation (DIRECT API CALL)
+            generateBtn.addEventListener('click', async () => {
+                const prompt = designPromptInput.value.trim();
+                const isMultimodal = uploadedBase64Image !== null;
 
-							response = await fetch(modelUrl, {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify(payload)
-							});
+                if (!prompt && !isMultimodal) {
+                    showMessage("Please enter a text description or upload an image to generate a design.", 'error');
+                    return;
+                }
+                
+                loadingSpinner.classList.remove('hidden');
+                designOutput.classList.add('hidden');
+                messageBox.classList.add('hidden');
+                
+                let imageUrl = '';
+                let maxRetries = 3;
+                let delay = 1000;
+                let finalBase64Data = null;
 
-							result = await response.json();
-							// Extract base64 data from the complex multimodal response structure
-							finalBase64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        let response, result;
 
-						} else {
-							// --- Text-to-Image Generation using imagen-3.0-generate-002 ---
-							const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+                        if (isMultimodal) {
+                            // --- Multimodal (Image Editing/Transformation) using gemini-2.5-flash-image-preview ---
+                            const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+                            
+                            const contents = [];
+                            // 1. Add image part
+                            contents.push({
+                                inlineData: {
+                                    mimeType: imageUpload.files[0].type,
+                                    data: uploadedBase64Image
+                                }
+                            });
+                            // 2. Add text part (or default if prompt is empty)
+                            contents.push({ text: prompt || "Redraw this image as a creative t-shirt graphic." });
 
-							const payload = {
-								instances: [{ prompt: prompt }],
-								parameters: { 
-									sampleCount: 1,
-									aspectRatio: "1:1"
-								}
-							};
+                            const payload = {
+                                contents: [{ parts: contents }],
+                                generationConfig: {
+                                    responseModalities: ['TEXT', 'IMAGE']
+                                }
+                            };
 
-							response = await fetch(modelUrl, {
-								method: 'POST',
-								headers: { 'Content-Type': 'application/json' },
-								body: JSON.stringify(payload)
-							});
+                            response = await fetch(modelUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
 
-							result = await response.json();
-							// Extract base64 data from the simple Imagen prediction response structure
-							finalBase64Data = result.predictions && result.predictions.length > 0 ? result.predictions[0].bytesBase64Encoded : null;
-						}
+                            result = await response.json();
+                            // Extract base64 data from the complex multimodal response structure
+                            finalBase64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
 
-						if (response.status === 429 && i < maxRetries - 1) {
-							console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
-							await new Promise(resolve => setTimeout(resolve, delay));
-							delay *= 2; // Exponential backoff
-							continue; // Retry
-						}
+                        } else {
+                            // --- Text-to-Image Generation using imagen-3.0-generate-002 ---
+                            const modelUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
 
-						if (!response.ok) {
-							const errorResult = result.error || await response.text();
-							console.error("AI API Error Response:", errorResult);
-							// This is the CRITICAL error message we need now.
-							showMessage(`AI generation failed (${response.status}). Check the console for the API error details!`, 'error');
-							throw new Error(`AI generation failed (${response.status}).`);
-						}
-						
-						if (finalBase64Data) {
-							imageUrl = `data:image/png;base64,${finalBase64Data}`;
-							generatedImage.src = imageUrl;
-							designOutput.classList.remove('hidden');
-							break; // Success
-						} else {
-							throw new Error("No image data received from the generator service. Check if the prompt was censored.");
-						}
+                            const payload = {
+                                instances: [{ prompt: prompt }],
+                                parameters: { 
+                                    sampleCount: 1,
+                                    aspectRatio: "1:1"
+                                }
+                            };
 
-					} catch (error) {
-						console.error('Final attempt failed:', error);
-						if (i === maxRetries - 1) {
-							showMessage(`Failed to generate design. Error: ${error.message}`, 'error');
-						}
-					}
-				} // End retry loop
-				
-				loadingSpinner.classList.add('hidden');
-			});
-			
-			// Add To Cart button is disabled when auth is disabled
-			const addToCartBtn = document.getElementById('addToCartBtn');
-			addToCartBtn.addEventListener('click', () => {
-					showMessage("Design saving is disabled while we fix the generation issue.", 'error');
-			});
+                            response = await fetch(modelUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
 
-			// Logout button is disabled when auth is disabled
-			document.getElementById('logoutBtn')?.addEventListener('click', () => {
-					showMessage("Authentication is disabled.", 'error');
-			});
-		}
-		
-		// Wait for the DOMContentLoaded event before attempting to access DOM elements
-		document.addEventListener('DOMContentLoaded', () => {
-			// Wait briefly for the type="module" script to ensure `window.firebase` is set
-			setTimeout(() => {
-				if (window.firebase) {
-					// Start application logic without waiting for authentication
-					startApplication(window.firebase);
-				} else {
-					console.error("FATAL: window.firebase object not found after module load timeout.");
-				}
-				// Show the home tab by default
-				showTab('home'); 
-			}, 100); 
-		});
-	</script>
-	
+                            result = await response.json();
+                            // Extract base64 data from the simple Imagen prediction response structure
+                            finalBase64Data = result.predictions && result.predictions.length > 0 ? result.predictions[0].bytesBase64Encoded : null;
+                        }
+
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            console.log(`Rate limit exceeded. Retrying in ${delay / 1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Exponential backoff
+                            continue; // Retry
+                        }
+
+                        if (!response.ok) {
+                            const errorResult = result.error || await response.text();
+                            console.error("AI API Error Response:", errorResult);
+                            // This is the CRITICAL error message we need now.
+                            showMessage(`AI generation failed (${response.status}). Check the console for the API error details!`, 'error');
+                            throw new Error(`AI generation failed (${response.status}).`);
+                        }
+                        
+                        if (finalBase64Data) {
+                            imageUrl = `data:image/png;base64,${finalBase64Data}`;
+                            generatedImage.src = imageUrl;
+                            designOutput.classList.remove('hidden');
+                            break; // Success
+                        } else {
+                            throw new Error("No image data received from the generator service. Check if the prompt was censored.");
+                        }
+
+                    } catch (error) {
+                        console.error('Final attempt failed:', error);
+                        if (i === maxRetries - 1) {
+                            showMessage(`Failed to generate design. Error: ${error.message}`, 'error');
+                        }
+                    }
+                } // End retry loop
+                
+                loadingSpinner.classList.add('hidden');
+            });
+            
+            // Add To Cart button is disabled when auth is disabled
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            addToCartBtn.addEventListener('click', () => {
+                 showMessage("Design saving is disabled while we fix the generation issue.", 'error');
+            });
+
+            // Logout button is disabled when auth is disabled
+            document.getElementById('authButton').addEventListener('click', () => {
+                 showMessage("Authentication is disabled. Mock login state in effect.", 'error');
+            });
+        }
+        
+        // Wait for the DOMContentLoaded event before attempting to access DOM elements
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait briefly for the type="module" script to ensure `window.firebase` is set
+            setTimeout(() => {
+                if (window.firebase) {
+                    // Start application logic without waiting for authentication
+                    startApplication(window.firebase);
+                } else {
+                    console.error("FATAL: window.firebase object not found after module load timeout.");
+                }
+                // Show the home tab by default
+                showTab('home'); 
+            }, 100); 
+        });
+    </script>
+    
 </body>
 </html>
